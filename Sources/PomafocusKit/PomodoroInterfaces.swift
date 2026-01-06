@@ -10,7 +10,7 @@ public protocol PomodoroSyncManaging: AnyObject {
     func currentState() -> PomodoroSharedState
     func currentPreferences() -> PomodoroPreferencesSnapshot
     func publishState(duration: Int, startedAt: Date?, isRunning: Bool)
-    func publishPreferences(minutes: Int)
+    func publishPreferences(minutes: Int, deepBreathEnabled: Bool)
 }
 
 @MainActor

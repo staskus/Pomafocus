@@ -58,10 +58,45 @@ import Testing
         let blocker = MockBlocker()
         let controller = PomodoroSessionController(timer: timer, syncManager: sync, blocker: blocker)
 
-        let snapshot = PomodoroPreferencesSnapshot(minutes: 42, updatedAt: Date(), originIdentifier: "remote")
+        let snapshot = PomodoroPreferencesSnapshot(minutes: 42, deepBreathEnabled: true, updatedAt: Date(), originIdentifier: "remote")
         sync.onPreferencesChange?(snapshot)
         #expect(controller.minutes == 42)
         #expect(controller.remainingDisplay == "42:00")
+        #expect(controller.deepBreathEnabled == true)
+    }
+
+    @Test func deepBreathRequiresSecondTap() async {
+        let timer = PomodoroTimer()
+        var deepNow = Date()
+        let deepTicker = MockTicker()
+        let deepTimer = PomodoroTimer(now: { deepNow }, ticker: deepTicker)
+        let sync = MockSyncManager()
+        let blocker = MockBlocker()
+        let controller = PomodoroSessionController(
+            timer: timer,
+            deepBreathTimer: deepTimer,
+            deepBreathClock: { deepNow },
+            syncManager: sync,
+            blocker: blocker
+        )
+
+        controller.setDeepBreathEnabled(true)
+        controller.toggleTimer()
+        controller.toggleTimer()
+
+        #expect(controller.isRunning == true)
+        #expect(controller.isDeepBreathing == true)
+
+        controller.toggleTimer()
+        #expect(controller.isRunning == true)
+
+        deepNow = deepNow.addingTimeInterval(30)
+        deepTicker.fire()
+        await Task.yield()
+        #expect(controller.deepBreathReady == true)
+
+        controller.toggleTimer()
+        #expect(controller.isRunning == false)
     }
 }
 
@@ -82,6 +117,7 @@ private final class MockSyncManager: PomodoroSyncManaging {
     )
     private var preferences = PomodoroPreferencesSnapshot(
         minutes: 25,
+        deepBreathEnabled: false,
         updatedAt: Date(),
         originIdentifier: "local"
     )
@@ -111,9 +147,10 @@ private final class MockSyncManager: PomodoroSyncManaging {
         publishedStates.append(newState)
     }
 
-    func publishPreferences(minutes: Int) {
+    func publishPreferences(minutes: Int, deepBreathEnabled: Bool) {
         let snapshot = PomodoroPreferencesSnapshot(
             minutes: minutes,
+            deepBreathEnabled: deepBreathEnabled,
             updatedAt: Date(),
             originIdentifier: deviceIdentifier
         )

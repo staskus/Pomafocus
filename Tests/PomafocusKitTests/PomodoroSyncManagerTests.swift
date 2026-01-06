@@ -16,22 +16,26 @@ import Testing
 
         var received: PomodoroPreferencesSnapshot?
         manager.onPreferencesChange = { received = $0 }
-        manager.publishPreferences(minutes: 35)
+        manager.publishPreferences(minutes: 35, deepBreathEnabled: true)
 
         #expect(received?.minutes == 35)
+        #expect(received?.deepBreathEnabled == true)
         #expect(defaults.integer(forKey: "pomodoro.minutes") == 35)
+        #expect(defaults.bool(forKey: "pomodoro.deepBreathEnabled") == true)
 
         let data = store.data(forKey: "pomafocus.shared.preferences")
         #expect(data != nil)
         if let data {
             let decoded = try JSONDecoder().decode(PomodoroPreferencesSnapshot.self, from: data)
             #expect(decoded.minutes == 35)
+            #expect(decoded.deepBreathEnabled == true)
         }
     }
 
     @Test func currentPreferencesFallsBackToStoredMinutes() {
         let defaults = temporaryDefaults()
         defaults.set(42, forKey: "pomodoro.minutes")
+        defaults.set(true, forKey: "pomodoro.deepBreathEnabled")
         let cloud = MockCloudSync()
         let manager = PomodoroSyncManager(
             store: MockStore(),
@@ -41,6 +45,7 @@ import Testing
 
         let snapshot = manager.currentPreferences()
         #expect(snapshot.minutes == 42)
+        #expect(snapshot.deepBreathEnabled == true)
     }
 
     @Test func publishStateForwardsToCloud() {

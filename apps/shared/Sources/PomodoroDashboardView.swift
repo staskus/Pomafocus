@@ -43,43 +43,8 @@ public struct PomodoroDashboardView: View {
 
     private var timerCard: some View {
         VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 12)
-                    .frame(width: 220, height: 220)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(
-                        AngularGradient(
-                            gradient: Gradient(colors: [.white, Color("AccentGlow")]),
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 12, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 220, height: 220)
-                    .animation(.easeInOut(duration: 0.4), value: progress)
-
-                VStack {
-                    Text(session.remainingDisplay)
-                        .font(.system(size: 48, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
-                    Text(session.isRunning ? "Stay in flow" : "Ready to focus")
-                        .foregroundColor(.white.opacity(0.8))
-                        .font(.subheadline)
-                }
-            }
-
-            Button(action: session.toggleTimer) {
-                Text(session.isRunning ? "Stop Session" : "Start Focus")
-                    .font(.title3.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.white)
-                    .foregroundColor(Color("AccentDeep"))
-                    .cornerRadius(16)
-            }
+            timerRing
+            stopButton
         }
         .padding()
         .background(Color.white.opacity(0.08))
@@ -112,6 +77,11 @@ public struct PomodoroDashboardView: View {
             }
 
             PlatformBlockingPanel()
+            Toggle(isOn: deepBreathBinding) {
+                Label("Deep breath before stopping", systemImage: "lungs.fill")
+                    .foregroundColor(.white.opacity(0.85))
+            }
+            .toggleStyle(.switch)
         }
     }
 
@@ -121,4 +91,89 @@ public struct PomodoroDashboardView: View {
         return CGFloat(1 - (session.remaining / total))
     }
 
+    private var timerRing: some View {
+        let ringWidth: CGFloat = 14
+        return ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.2), lineWidth: ringWidth)
+                .frame(width: 220, height: 220)
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [.white, Color("AccentGlow")]),
+                        center: .center
+                    ),
+                    style: StrokeStyle(lineWidth: ringWidth, lineCap: .round, lineJoin: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 220, height: 220)
+                .animation(.easeInOut(duration: 0.4), value: progress)
+
+            VStack(spacing: 4) {
+                Text(session.remainingDisplay)
+                    .font(.system(size: 48, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                Text(session.isRunning ? "Stay in flow" : "Ready to focus")
+                    .foregroundColor(.white.opacity(0.8))
+                    .font(.subheadline)
+            }
+        }
+    }
+
+    private var stopButton: some View {
+        Button(action: session.toggleTimer) {
+            VStack(spacing: 6) {
+                Text(stopButtonTitle)
+                    .font(.title3.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(Color("AccentDeep"))
+                if let progress = deepBreathProgress {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .tint(Color("AccentGlow"))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .cornerRadius(16)
+        }
+        .disabled(stopButtonDisabled)
+    }
+
+    private var stopButtonTitle: String {
+        if session.isRunning {
+            if session.deepBreathEnabled {
+                if session.deepBreathReady {
+                    return "Confirm Stop"
+                }
+                if let remaining = session.deepBreathRemaining {
+                    return "Deep breath \(PomodoroSessionController.format(seconds: Int(remaining)))"
+                }
+            }
+            return "Stop Session"
+        } else {
+            return "Start Focus"
+        }
+    }
+
+    private var stopButtonDisabled: Bool {
+        session.isRunning && session.deepBreathEnabled && session.deepBreathRemaining != nil && !session.deepBreathReady
+    }
+
+    private var deepBreathProgress: Double? {
+        guard let remaining = session.deepBreathRemaining else { return nil }
+        let elapsed = PomodoroSessionController.deepBreathDuration - remaining
+        return min(max(elapsed / PomodoroSessionController.deepBreathDuration, 0), 1)
+    }
+
+    private var deepBreathBinding: Binding<Bool> {
+        Binding(
+            get: { session.deepBreathEnabled },
+            set: { session.setDeepBreathEnabled($0) }
+        )
+    }
 }

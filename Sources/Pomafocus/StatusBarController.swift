@@ -8,6 +8,7 @@ final class StatusBarController {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
     private let timer = PomodoroTimer()
+    private let deepBreathTimer = PomodoroTimer()
     private let settings = PomodoroSettings()
     private let hotkeyManager = HotkeyManager()
     private let syncManager = PomodoroSyncManager.shared
@@ -18,6 +19,8 @@ final class StatusBarController {
     private var currentSnapshot: PomodoroSettings.Snapshot
     private var currentSessionStart: Date?
     private var activeDuration: Int = 0
+    private var deepBreathRemaining: TimeInterval?
+    private var deepBreathReady = false
 
     private lazy var toggleItem: NSMenuItem = {
         let item = NSMenuItem(title: "Start Pomodoro", action: #selector(toggleTimer), keyEquivalent: "")
@@ -29,6 +32,7 @@ final class StatusBarController {
         currentSnapshot = settings.snapshot()
         configureStatusItem()
         bindTimerCallbacks()
+        configureDeepBreathTimer()
         apply(snapshot: currentSnapshot)
         configureSync()
     }
@@ -40,9 +44,14 @@ final class StatusBarController {
 
     @objc private func toggleTimer() {
         if timer.isRunning {
-            stopSession(shouldSync: true)
+            if currentSnapshot.deepBreathEnabled {
+                handleDeepBreathToggle()
+            } else {
+                stopSession(shouldSync: true)
+            }
         } else {
             let duration = currentSnapshot.minutes * 60
+            resetDeepBreath()
             startSession(durationSeconds: duration, startDate: Date(), shouldSync: true)
         }
     }
@@ -103,6 +112,9 @@ final class StatusBarController {
             settings.save(snapshot)
         }
         currentSnapshot = snapshot
+        if !snapshot.deepBreathEnabled {
+            resetDeepBreath()
+        }
         registerHotkey()
     }
 
@@ -132,7 +144,7 @@ final class StatusBarController {
         if minutes != currentSnapshot.minutes {
             var updatedSnapshot = currentSnapshot
             updatedSnapshot.minutes = minutes
-            settings.updateMinutesFromSync(minutes)
+            settings.updatePreferencesFromSync(minutes: minutes, deepBreathEnabled: currentSnapshot.deepBreathEnabled)
             currentSnapshot = updatedSnapshot
             preferencesWindowController.applyExternalSnapshot(updatedSnapshot)
         }
@@ -145,13 +157,15 @@ final class StatusBarController {
         }
         var snapshot = currentSnapshot
         snapshot.minutes = preferences.minutes
-        settings.updateMinutesFromSync(preferences.minutes)
+        snapshot.deepBreathEnabled = preferences.deepBreathEnabled
+        settings.updatePreferencesFromSync(minutes: preferences.minutes, deepBreathEnabled: preferences.deepBreathEnabled)
         apply(snapshot: snapshot, persist: false)
         preferencesWindowController.applyExternalSnapshot(snapshot)
         updateStatusTitle()
     }
 
     private func startSession(durationSeconds: Int, startDate: Date, shouldSync: Bool) {
+        resetDeepBreath()
         activeDuration = durationSeconds
         currentSessionStart = startDate
         timer.start(duration: TimeInterval(durationSeconds), startDate: startDate)
@@ -162,6 +176,7 @@ final class StatusBarController {
     }
 
     private func stopSession(shouldSync: Bool) {
+        resetDeepBreath()
         timer.stop()
         blocker.endBlocking()
         currentSessionStart = nil
@@ -182,6 +197,14 @@ final class StatusBarController {
 
     private func updateStatusTitle(remaining: TimeInterval? = nil) {
         guard let button = statusItem.button else { return }
+        if currentSnapshot.deepBreathEnabled, deepBreathRemaining != nil || deepBreathReady {
+            if deepBreathReady {
+                button.title = "Deep breath complete"
+            } else if let breath = deepBreathRemaining {
+                button.title = "Breath \(formattedTime(from: Int(breath)))"
+            }
+            return
+        }
         if timer.isRunning {
             let secondsLeft = Int(remaining ?? timer.remaining)
             button.title = formattedTime(from: secondsLeft)
@@ -202,5 +225,40 @@ final class StatusBarController {
 
     private func playCompletionSound() {
         NSSound(named: NSSound.Name("Glass"))?.play()
+    }
+
+    private func configureDeepBreathTimer() {
+        deepBreathTimer.onTick = { [weak self] remaining in
+            self?.deepBreathRemaining = remaining
+            self?.updateStatusTitle()
+        }
+        deepBreathTimer.onCompletion = { [weak self] in
+            guard let self else { return }
+            self.deepBreathRemaining = 0
+            self.deepBreathReady = true
+            self.updateStatusTitle()
+        }
+    }
+
+    private func handleDeepBreathToggle() {
+        if deepBreathReady {
+            stopSession(shouldSync: true)
+        } else if deepBreathRemaining == nil {
+            beginDeepBreathCountdown()
+        }
+    }
+
+    private func beginDeepBreathCountdown() {
+        deepBreathReady = false
+        deepBreathRemaining = PomodoroSessionController.deepBreathDuration
+        deepBreathTimer.start(duration: PomodoroSessionController.deepBreathDuration)
+        updateStatusTitle()
+    }
+
+    private func resetDeepBreath() {
+        deepBreathTimer.stop()
+        deepBreathRemaining = nil
+        deepBreathReady = false
+        updateStatusTitle()
     }
 }

@@ -21,6 +21,7 @@ public final class PomodoroSyncManager {
         static let preferences = "pomafocus.shared.preferences"
         static let deviceID = "pomafocus.device.identifier"
         static let fallbackMinutes = "pomodoro.minutes"
+        static let deepBreathEnabled = "pomodoro.deepBreathEnabled"
     }
 
     init(
@@ -91,11 +92,13 @@ public final class PomodoroSyncManager {
         if let data = data(forKey: Keys.preferences),
            let decoded = try? decoder.decode(PomodoroPreferencesSnapshot.self, from: data) {
             defaults.set(decoded.minutes, forKey: Keys.fallbackMinutes)
+            defaults.set(decoded.deepBreathEnabled, forKey: Keys.deepBreathEnabled)
             return decoded
         }
-        let fallback = storedFallbackMinutes()
+        let fallback = storedFallbackPreferences()
         return PomodoroPreferencesSnapshot(
-            minutes: fallback,
+            minutes: fallback.minutes,
+            deepBreathEnabled: fallback.deepBreathEnabled,
             updatedAt: Date(),
             originIdentifier: deviceIdentifier
         )
@@ -113,10 +116,12 @@ public final class PomodoroSyncManager {
         cloudSync.publish(state: state)
     }
 
-    public func publishPreferences(minutes: Int) {
+    public func publishPreferences(minutes: Int, deepBreathEnabled: Bool) {
         defaults.set(minutes, forKey: Keys.fallbackMinutes)
+        defaults.set(deepBreathEnabled, forKey: Keys.deepBreathEnabled)
         let snapshot = PomodoroPreferencesSnapshot(
             minutes: minutes,
+            deepBreathEnabled: deepBreathEnabled,
             updatedAt: Date(),
             originIdentifier: deviceIdentifier
         )
@@ -140,9 +145,11 @@ public final class PomodoroSyncManager {
         set(data, forKey: Keys.preferences)
     }
 
-    private func storedFallbackMinutes() -> Int {
+    private func storedFallbackPreferences() -> (minutes: Int, deepBreathEnabled: Bool) {
         let stored = defaults.integer(forKey: Keys.fallbackMinutes)
-        return stored > 0 ? stored : 25
+        let minutes = stored > 0 ? stored : 25
+        let deepBreath = defaults.bool(forKey: Keys.deepBreathEnabled)
+        return (minutes, deepBreath)
     }
 
     private func handleStoreChange(reason: Int, changedKeys: [String]) {

@@ -235,6 +235,7 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
 
     private func configure(record: CKRecord, with preferences: PomodoroPreferencesSnapshot) {
         record["minutes"] = NSNumber(value: preferences.minutes)
+        record["deepBreathEnabled"] = NSNumber(value: preferences.deepBreathEnabled)
         record["updatedAt"] = preferences.updatedAt as NSDate
         record["originIdentifier"] = preferences.originIdentifier as NSString
     }
@@ -269,6 +270,7 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
 
         return PomodoroPreferencesSnapshot(
             minutes: minutesNumber.intValue,
+            deepBreathEnabled: (record["deepBreathEnabled"] as? NSNumber)?.boolValue ?? false,
             updatedAt: updatedAt,
             originIdentifier: origin
         )

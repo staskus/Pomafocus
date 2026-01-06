@@ -6,6 +6,7 @@ final class PreferencesWindowController: NSWindowController {
     private let onUpdate: (PomodoroSettings.Snapshot) -> Void
     private let minutesField = NSTextField(string: "")
     private lazy var hotkeyField: HotkeyField = HotkeyField(hotkey: currentSnapshot.hotkey)
+    private let deepBreathCheckbox = NSButton(checkboxWithTitle: "Require a 30-second deep breath before stopping", target: nil, action: nil)
     private var currentSnapshot: PomodoroSettings.Snapshot
 
     init(settings: PomodoroSettings, onUpdate: @escaping (PomodoroSettings.Snapshot) -> Void) {
@@ -61,6 +62,8 @@ final class PreferencesWindowController: NSWindowController {
         hotkeyField.onChange = { [weak self] hotkey in
             self?.currentSnapshot.hotkey = hotkey
         }
+        deepBreathCheckbox.target = self
+        deepBreathCheckbox.action = #selector(toggleDeepBreath(_:))
     }
 
     private func buildLayout(in window: NSWindow) {
@@ -81,6 +84,7 @@ final class PreferencesWindowController: NSWindowController {
         stack.addArrangedSubview(minutesField)
         stack.addArrangedSubview(hotkeyLabel)
         stack.addArrangedSubview(hotkeyField)
+        stack.addArrangedSubview(deepBreathCheckbox)
         stack.addArrangedSubview(NSView())
         stack.addArrangedSubview(saveButton)
 
@@ -96,6 +100,7 @@ final class PreferencesWindowController: NSWindowController {
     private func applySnapshotToFields() {
         minutesField.stringValue = "\(currentSnapshot.minutes)"
         hotkeyField.hotkey = currentSnapshot.hotkey
+        deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
     }
 
     func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
@@ -112,4 +117,7 @@ final class PreferencesWindowController: NSWindowController {
         window?.close()
     }
 
+    @objc private func toggleDeepBreath(_ sender: NSButton) {
+        currentSnapshot.deepBreathEnabled = sender.state == .on
+    }
 }

@@ -32,6 +32,15 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon")
             ]
+        ),
+        .testTarget(
+            name: "PomafocusKitTests",
+            dependencies: [
+                "PomafocusKit"
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("SwiftTesting")
+            ]
         )
     ]
 )

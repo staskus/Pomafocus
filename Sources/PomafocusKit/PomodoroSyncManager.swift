@@ -124,26 +124,29 @@ public final class PomodoroSyncManager {
     }
 
     @objc private func storeDidChange(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let reason = userInfo[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
-        else {
-            return
-        }
+        Task { @MainActor [weak self] in
+            guard let self,
+                  let userInfo = notification.userInfo,
+                  let reason = userInfo[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
+            else {
+                return
+            }
 
-        switch reason {
-        case NSUbiquitousKeyValueStoreServerChange,
-             NSUbiquitousKeyValueStoreInitialSyncChange,
-             NSUbiquitousKeyValueStoreQuotaViolationChange:
-            let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
-            if changedKeys.contains(Keys.state) {
-                onStateChange?(currentState())
+            switch reason {
+            case NSUbiquitousKeyValueStoreServerChange,
+                 NSUbiquitousKeyValueStoreInitialSyncChange,
+                 NSUbiquitousKeyValueStoreQuotaViolationChange:
+                let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
+                if changedKeys.contains(Keys.state) {
+                    onStateChange?(currentState())
+                }
+                if changedKeys.contains(Keys.preferences) {
+                    let prefs = currentPreferences()
+                    onPreferencesChange?(prefs)
+                }
+            default:
+                break
             }
-            if changedKeys.contains(Keys.preferences) {
-                let prefs = currentPreferences()
-                onPreferencesChange?(prefs)
-            }
-        default:
-            break
         }
     }
 }

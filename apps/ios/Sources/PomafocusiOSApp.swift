@@ -34,7 +34,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
         Task {
+            _ = PomafocusCore.shared
             let handled = await PomodoroSyncManager.shared.handleRemoteNotification(userInfo)
+            await MainActor.run {
+                PomafocusCore.shared.refreshLiveActivity()
+            }
             completionHandler(handled ? .newData : .noData)
         }
     }

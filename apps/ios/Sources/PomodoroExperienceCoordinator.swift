@@ -37,4 +37,8 @@ final class PomodoroExperienceCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
     }
+
+    func refreshLiveActivity() {
+        liveActivityManager.startOrUpdate(from: session)
+    }
 }

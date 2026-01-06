@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 @MainActor
 public final class PomodoroSyncManager {
@@ -10,11 +10,11 @@ public final class PomodoroSyncManager {
 
     private let store: NSUbiquitousKeyValueStore?
     private let defaults: UserDefaults
-    private let notificationCenter: NotificationCenter
     private let cloudSync: PomodoroCloudSyncing
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private var observing = false
+    @preconcurrency private var storeObserver: NSObjectProtocol?
 
     private enum Keys {
         static let state = "pomafocus.shared.state"
@@ -26,12 +26,10 @@ public final class PomodoroSyncManager {
     init(
         store: NSUbiquitousKeyValueStore? = .default,
         defaults: UserDefaults = .standard,
-        notificationCenter: NotificationCenter = .default,
         cloudSync: PomodoroCloudSyncing? = nil
     ) {
         self.store = store
         self.defaults = defaults
-        self.notificationCenter = notificationCenter
         self.cloudSync = cloudSync ?? CloudKitPomodoroSync()
         if let storedID = defaults.string(forKey: Keys.deviceID) {
             deviceIdentifier = storedID
@@ -44,19 +42,31 @@ public final class PomodoroSyncManager {
     }
 
     deinit {
-        notificationCenter.removeObserver(self)
+        if let storeObserver {
+            NotificationCenter.default.removeObserver(storeObserver)
+        }
     }
 
     public func start() {
         guard !observing else { return }
         observing = true
         if let store {
-            notificationCenter.addObserver(
-                self,
-                selector: #selector(storeDidChange(_:)),
-                name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-                object: store
-            )
+            storeObserver = NotificationCenter.default.addObserver(
+                forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+                object: store,
+                queue: .main
+            ) { [weak self] notification in
+                guard
+                    let userInfo = notification.userInfo,
+                    let reason = userInfo[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
+                else {
+                    return
+                }
+                let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
+                Task { @MainActor [weak self] in
+                    self?.handleStoreChange(reason: reason, changedKeys: changedKeys)
+                }
+            }
             store.synchronize()
         }
         cloudSync.start()
@@ -135,30 +145,20 @@ public final class PomodoroSyncManager {
         return stored > 0 ? stored : 25
     }
 
-    @objc private func storeDidChange(_ notification: Notification) {
-        Task { @MainActor [weak self] in
-            guard let self,
-                  let userInfo = notification.userInfo,
-                  let reason = userInfo[NSUbiquitousKeyValueStoreChangeReasonKey] as? Int
-            else {
-                return
+    private func handleStoreChange(reason: Int, changedKeys: [String]) {
+        switch reason {
+        case NSUbiquitousKeyValueStoreServerChange,
+             NSUbiquitousKeyValueStoreInitialSyncChange,
+             NSUbiquitousKeyValueStoreQuotaViolationChange:
+            if changedKeys.contains(Keys.state) {
+                onStateChange?(currentState())
             }
-
-            switch reason {
-            case NSUbiquitousKeyValueStoreServerChange,
-                 NSUbiquitousKeyValueStoreInitialSyncChange,
-                 NSUbiquitousKeyValueStoreQuotaViolationChange:
-                let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
-                if changedKeys.contains(Keys.state) {
-                    onStateChange?(currentState())
-                }
-                if changedKeys.contains(Keys.preferences) {
-                    let prefs = currentPreferences()
-                    onPreferencesChange?(prefs)
-                }
-            default:
-                break
+            if changedKeys.contains(Keys.preferences) {
+                let prefs = currentPreferences()
+                onPreferencesChange?(prefs)
             }
+        default:
+            break
         }
     }
 
@@ -178,8 +178,8 @@ public final class PomodoroSyncManager {
             defaults.set(data, forKey: key)
         }
     }
-
-private func wireCloudCallbacks() {
+    
+    private func wireCloudCallbacks() {
         cloudSync.onStateChange = { [weak self] state in
             guard let self else { return }
             if state.originIdentifier == self.deviceIdentifier { return }
@@ -194,5 +194,4 @@ private func wireCloudCallbacks() {
         }
     }
 }
-
 extension PomodoroSyncManager: PomodoroSyncManaging {}

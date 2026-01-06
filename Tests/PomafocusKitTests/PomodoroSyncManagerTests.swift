@@ -11,7 +11,6 @@ import Testing
         let manager = PomodoroSyncManager(
             store: store,
             defaults: defaults,
-            notificationCenter: NotificationCenter(),
             cloudSync: cloud
         )
 
@@ -37,7 +36,6 @@ import Testing
         let manager = PomodoroSyncManager(
             store: MockStore(),
             defaults: defaults,
-            notificationCenter: NotificationCenter(),
             cloudSync: cloud
         )
 
@@ -52,7 +50,6 @@ import Testing
         let manager = PomodoroSyncManager(
             store: store,
             defaults: defaults,
-            notificationCenter: NotificationCenter(),
             cloudSync: cloud
         )
 
@@ -69,7 +66,6 @@ import Testing
         let manager = PomodoroSyncManager(
             store: store,
             defaults: defaults,
-            notificationCenter: NotificationCenter(),
             cloudSync: cloud
         )
         var received: PomodoroSharedState?
@@ -95,7 +91,6 @@ import Testing
         let manager = PomodoroSyncManager(
             store: MockStore(),
             defaults: temporaryDefaults(),
-            notificationCenter: NotificationCenter(),
             cloudSync: cloud
         )
 

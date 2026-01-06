@@ -1,5 +1,7 @@
 import AppKit
+import PomafocusKit
 
+@MainActor
 final class PomodoroSettings {
     struct Snapshot {
         var minutes: Int
@@ -12,25 +14,28 @@ final class PomodoroSettings {
     }
 
     private let defaults: UserDefaults
+    private let syncManager: PomodoroSyncManager
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, syncManager: PomodoroSyncManager = .shared) {
         self.defaults = defaults
+        self.syncManager = syncManager
     }
 
     func snapshot() -> Snapshot {
-        Snapshot(minutes: storedMinutes(), hotkey: storedHotkey())
+        let minutes = syncManager.currentPreferences().minutes
+        return Snapshot(minutes: minutes, hotkey: storedHotkey())
     }
 
     func save(_ snapshot: Snapshot) {
         defaults.set(snapshot.minutes, forKey: Keys.minutes)
+        syncManager.publishPreferences(minutes: snapshot.minutes)
         if let data = try? JSONEncoder().encode(snapshot.hotkey) {
             defaults.set(data, forKey: Keys.hotkey)
         }
     }
 
-    private func storedMinutes() -> Int {
-        let value = defaults.integer(forKey: Keys.minutes)
-        return value > 0 ? value : 25
+    func updateMinutesFromSync(_ minutes: Int) {
+        defaults.set(minutes, forKey: Keys.minutes)
     }
 
     private func storedHotkey() -> Hotkey {

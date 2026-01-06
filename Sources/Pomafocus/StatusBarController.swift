@@ -8,10 +8,13 @@ final class StatusBarController {
     private let timer = PomodoroTimer()
     private let settings = PomodoroSettings()
     private let hotkeyManager = HotkeyManager()
+    private let syncManager = PomodoroSyncManager.shared
     private lazy var preferencesWindowController = PreferencesWindowController(settings: settings) { [weak self] snapshot in
         self?.apply(snapshot: snapshot, persist: true)
     }
     private var currentSnapshot: PomodoroSettings.Snapshot
+    private var currentSessionStart: Date?
+    private var activeDuration: Int = 0
 
     private lazy var toggleItem: NSMenuItem = {
         let item = NSMenuItem(title: "Start Pomodoro", action: #selector(toggleTimer), keyEquivalent: "")
@@ -24,6 +27,7 @@ final class StatusBarController {
         configureStatusItem()
         bindTimerCallbacks()
         apply(snapshot: currentSnapshot)
+        configureSync()
     }
 
     func showPreferences() {
@@ -33,9 +37,10 @@ final class StatusBarController {
 
     @objc private func toggleTimer() {
         if timer.isRunning {
-            timer.stop()
+            stopSession(shouldSync: true)
         } else {
-            timer.start(duration: TimeInterval(currentSnapshot.minutes * 60))
+            let duration = currentSnapshot.minutes * 60
+            startSession(durationSeconds: duration, startDate: Date(), shouldSync: true)
         }
     }
 
@@ -85,6 +90,7 @@ final class StatusBarController {
 
         timer.onCompletion = { [weak self] in
             self?.playCompletionSound()
+            self?.stopSession(shouldSync: true)
             self?.updateStatusTitle()
         }
     }
@@ -95,6 +101,70 @@ final class StatusBarController {
         }
         currentSnapshot = snapshot
         registerHotkey()
+    }
+
+    private func configureSync() {
+        syncManager.onStateChange = { [weak self] state in
+            self?.handleSharedState(state, ignoreIfLocalOrigin: true)
+        }
+        syncManager.onPreferencesChange = { [weak self] snapshot in
+            self?.handleSharedPreferences(snapshot, ignoreIfLocalOrigin: true)
+        }
+        syncManager.start()
+        handleSharedPreferences(syncManager.currentPreferences(), ignoreIfLocalOrigin: false)
+        handleSharedState(syncManager.currentState(), ignoreIfLocalOrigin: false)
+    }
+
+    private func handleSharedState(_ state: PomodoroSharedState, ignoreIfLocalOrigin: Bool) {
+        if ignoreIfLocalOrigin && state.originIdentifier == syncManager.deviceIdentifier {
+            return
+        }
+
+        guard state.isRunning, let start = state.startedAt else {
+            stopSession(shouldSync: false)
+            return
+        }
+
+        let minutes = max(1, state.duration / 60)
+        if minutes != currentSnapshot.minutes {
+            var updatedSnapshot = currentSnapshot
+            updatedSnapshot.minutes = minutes
+            settings.updateMinutesFromSync(minutes)
+            currentSnapshot = updatedSnapshot
+            preferencesWindowController.applyExternalSnapshot(updatedSnapshot)
+        }
+        startSession(durationSeconds: state.duration, startDate: start, shouldSync: false)
+    }
+
+    private func handleSharedPreferences(_ preferences: PomodoroPreferencesSnapshot, ignoreIfLocalOrigin: Bool) {
+        if ignoreIfLocalOrigin && preferences.originIdentifier == syncManager.deviceIdentifier {
+            return
+        }
+        var snapshot = currentSnapshot
+        snapshot.minutes = preferences.minutes
+        settings.updateMinutesFromSync(preferences.minutes)
+        apply(snapshot: snapshot, persist: false)
+        preferencesWindowController.applyExternalSnapshot(snapshot)
+        updateStatusTitle()
+    }
+
+    private func startSession(durationSeconds: Int, startDate: Date, shouldSync: Bool) {
+        activeDuration = durationSeconds
+        currentSessionStart = startDate
+        timer.start(duration: TimeInterval(durationSeconds), startDate: startDate)
+        if shouldSync {
+            syncManager.publishState(duration: durationSeconds, startedAt: startDate, isRunning: true)
+        }
+    }
+
+    private func stopSession(shouldSync: Bool) {
+        timer.stop()
+        currentSessionStart = nil
+        if shouldSync {
+            let duration = activeDuration == 0 ? currentSnapshot.minutes * 60 : activeDuration
+            syncManager.publishState(duration: duration, startedAt: nil, isRunning: false)
+        }
+        activeDuration = 0
     }
 
     private func registerHotkey() {

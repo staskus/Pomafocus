@@ -99,6 +99,13 @@ final class PreferencesWindowController: NSWindowController {
         hotkeyField.hotkey = currentSnapshot.hotkey
     }
 
+    func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
+        currentSnapshot = snapshot
+        if window?.isVisible == true {
+            applySnapshotToFields()
+        }
+    }
+
     @objc private func savePreferences() {
         let minutesValue = Int(minutesField.stringValue) ?? currentSnapshot.minutes
         currentSnapshot.minutes = max(1, minutesValue)

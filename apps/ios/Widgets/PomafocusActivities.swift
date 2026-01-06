@@ -11,11 +11,8 @@ struct PomafocusActivityView: View {
             Text("Pomafocus")
                 .font(.headline)
                 .foregroundColor(.white.opacity(0.8))
-            Text(timeRemaining)
-                .font(.system(size: 40, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundColor(.white)
-            progressBar
+            timerLabel
+            timerProgress
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -28,31 +25,53 @@ struct PomafocusActivityView: View {
         )
     }
 
-    private var timeRemaining: String {
+    private var timerLabel: some View {
+        if let interval = timerInterval {
+            return AnyView(
+                Text(timerInterval: interval, countsDown: true)
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+            )
+        } else {
+            return AnyView(
+                Text(formattedRemaining)
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundColor(.white)
+            )
+        }
+    }
+
+    private var timerProgress: some View {
+        if let interval = timerInterval {
+            return AnyView(
+                ProgressView(timerInterval: interval)
+                    .progressViewStyle(.linear)
+                    .tint(Color("AccentGlow"))
+            )
+        } else {
+            return AnyView(
+                ProgressView(value: Double(context.state.durationSeconds - context.state.remainingSeconds),
+                             total: Double(max(context.state.durationSeconds, 1)))
+                    .progressViewStyle(.linear)
+                    .tint(Color("AccentGlow"))
+            )
+        }
+    }
+
+    private var timerInterval: ClosedRange<Date>? {
+        guard let start = context.state.startedAt, let end = context.state.endsAt else {
+            return nil
+        }
+        return start...end
+    }
+
+    private var formattedRemaining: String {
         let seconds = max(0, context.state.remainingSeconds)
         let minutes = seconds / 60
         let secs = seconds % 60
         return String(format: "%02d:%02d", minutes, secs)
-    }
-
-    private var progressBar: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(height: 8)
-                Capsule()
-                    .fill(Color("AccentGlow"))
-                    .frame(width: geometry.size.width * progress, height: 8)
-            }
-        }
-        .frame(height: 8)
-    }
-
-    private var progress: CGFloat {
-        guard context.state.durationSeconds > 0 else { return 0 }
-        let elapsed = context.state.durationSeconds - context.state.remainingSeconds
-        return CGFloat(min(max(Double(elapsed) / Double(context.state.durationSeconds), 0), 1))
     }
 }
 
@@ -66,8 +85,13 @@ struct PomafocusActivities: Widget {
                     PomafocusActivityView(context: context)
                 }
             } compactLeading: {
-                Text(shortTime(context.state.remainingSeconds))
-                    .font(.body.monospacedDigit())
+                if let interval = context.timerInterval {
+                    Text(timerInterval: interval, countsDown: true)
+                        .font(.body.monospacedDigit())
+                } else {
+                    Text(shortTime(context.state.remainingSeconds))
+                        .font(.body.monospacedDigit())
+                }
             } compactTrailing: {
                 Image(systemName: "timer")
             } minimal: {
@@ -80,5 +104,14 @@ struct PomafocusActivities: Widget {
         let minutes = max(0, seconds) / 60
         let secs = max(0, seconds) % 60
         return String(format: "%02d:%02d", minutes, secs)
+    }
+}
+
+private extension ActivityViewContext where Attributes == PomodoroActivityAttributes {
+    var timerInterval: ClosedRange<Date>? {
+        guard let start = state.startedAt, let end = state.endsAt else {
+            return nil
+        }
+        return start...end
     }
 }

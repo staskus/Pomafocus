@@ -15,10 +15,15 @@ final class PomodoroLiveActivityManager {
 
     func startOrUpdate(from session: PomodoroSessionController) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let remaining = Int(session.remaining)
+        let duration = session.currentDurationSeconds
+        let startDate = session.currentSessionStart
+        let endDate = startDate?.addingTimeInterval(TimeInterval(duration))
         let contentState = PomodoroActivityAttributes.ContentState(
-            remainingSeconds: Int(session.remaining),
-            durationSeconds: session.currentDurationSeconds,
-            startedAt: session.currentSessionStart,
+            remainingSeconds: remaining,
+            durationSeconds: duration,
+            startedAt: startDate,
+            endsAt: endDate,
             isRunning: session.isRunning
         )
 

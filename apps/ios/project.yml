@@ -30,6 +30,8 @@ targets:
         services:
           - CloudKit
           - CloudDocuments
+      backgroundModes:
+        - remote-notification
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit

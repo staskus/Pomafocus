@@ -14,7 +14,7 @@ final class PomafocusCore: ObservableObject {
         self.experienceCoordinator = PomodoroExperienceCoordinator(session: session)
     }
 
-    func refreshLiveActivity() {
-        experienceCoordinator.refreshLiveActivity()
+    func refreshLiveActivity() async {
+        await experienceCoordinator.refreshLiveActivity()
     }
 }

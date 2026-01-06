@@ -36,9 +36,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         Task {
             _ = PomafocusCore.shared
             let handled = await PomodoroSyncManager.shared.handleRemoteNotification(userInfo)
-            await MainActor.run {
-                PomafocusCore.shared.refreshLiveActivity()
-            }
+            await PomafocusCore.shared.refreshLiveActivity()
             completionHandler(handled ? .newData : .noData)
         }
     }

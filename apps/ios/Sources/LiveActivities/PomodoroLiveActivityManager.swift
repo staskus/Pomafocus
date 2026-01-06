@@ -11,12 +11,21 @@ final class PomodoroLiveActivityManager {
 
     func bind(to session: PomodoroSessionController) {
         Task { @MainActor [weak self] in
-            await self?.reconcileExistingActivities()
-            self?.startOrUpdate(from: session)
+            await self?.performUpdate(for: session)
         }
     }
 
     func startOrUpdate(from session: PomodoroSessionController) {
+        Task { @MainActor [weak self] in
+            await self?.performUpdate(for: session)
+        }
+    }
+
+    func startOrUpdateImmediately(from session: PomodoroSessionController) async {
+        await performUpdate(for: session)
+    }
+
+    private func performUpdate(for session: PomodoroSessionController) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let remaining = Int(session.remaining)
         let duration = session.currentDurationSeconds
@@ -30,25 +39,22 @@ final class PomodoroLiveActivityManager {
             isRunning: session.isRunning
         )
 
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.reconcileExistingActivities()
-            if let activity = self.activity, session.isRunning {
-                await activity.update(ActivityContent(state: contentState, staleDate: nil))
-            } else if session.isRunning {
-                let attributes = PomodoroActivityAttributes(title: "Focus Session")
-                do {
-                    self.activity = try Activity.request(
-                        attributes: attributes,
-                        contentState: contentState,
-                        pushType: nil
-                    )
-                } catch {
-                    self.logger.error("Failed to start live activity: \(String(describing: error))")
-                }
-            } else {
-                await self.end()
+        await reconcileExistingActivities()
+        if let activity = self.activity, session.isRunning {
+            await activity.update(ActivityContent(state: contentState, staleDate: nil))
+        } else if session.isRunning {
+            let attributes = PomodoroActivityAttributes(title: "Focus Session")
+            do {
+                self.activity = try Activity.request(
+                    attributes: attributes,
+                    contentState: contentState,
+                    pushType: nil
+                )
+            } catch {
+                self.logger.error("Failed to start live activity: \(String(describing: error))")
             }
+        } else {
+            await self.end()
         }
     }
 

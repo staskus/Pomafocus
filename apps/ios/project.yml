@@ -5,7 +5,7 @@ options:
     iOS: "16.0"
 
 packages:
-  PomafocusKit:
+  PomafocusRoot:
     path: ../..
 
 schemes:
@@ -22,7 +22,7 @@ targets:
     sources:
       - path: Sources
     dependencies:
-      - package: PomafocusKit
+      - package: PomafocusRoot
         product: PomafocusKit
     settings:
       base:

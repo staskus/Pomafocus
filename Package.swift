@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,30 +7,21 @@ let package = Package(
     name: "Pomafocus",
     platforms: [
         .macOS(.v13),
-        .iOS(.v16)
+        .iOS(.v18)
     ],
     products: [
         .library(
             name: "PomafocusKit",
             targets: ["PomafocusKit"]
-        ),
-        .executable(
-            name: "Pomafocus",
-            targets: ["Pomafocus"]
         )
     ],
     targets: [
         .target(
-            name: "PomafocusKit"
-        ),
-        .executableTarget(
-            name: "Pomafocus",
-            dependencies: [
-                "PomafocusKit"
-            ],
+            name: "PomafocusKit",
             linkerSettings: [
-                .linkedFramework("AppKit"),
-                .linkedFramework("Carbon")
+                .linkedFramework("CloudKit"),
+                .linkedFramework("FamilyControls", .when(platforms: [.iOS])),
+                .linkedFramework("ManagedSettings", .when(platforms: [.iOS]))
             ]
         ),
         .testTarget(

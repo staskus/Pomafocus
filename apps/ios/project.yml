@@ -2,7 +2,7 @@ name: Pomafocus
 options:
   bundleIdPrefix: com.staskus.pomafocus
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "18.0"
 
 packages:
   PomafocusRoot:
@@ -21,9 +21,19 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      - path: ../shared/Sources
+    capabilities:
+      push: true
+      iCloud:
+        containers:
+          - iCloud.com.staskus.pomafocus
+        services:
+          - CloudKit
+          - CloudDocuments
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit
+      - target: PomafocusActivities
     settings:
       base:
         CODE_SIGN_STYLE: Automatic
@@ -32,3 +42,20 @@ targets:
         SWIFT_VERSION: "5.10"
         CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
         INFOPLIST_FILE: Sources/Info.plist
+        INFOPLIST_KEY_PomafocusCloudKitContainer: iCloud.com.staskus.pomafocus
+        INFOPLIST_KEY_PomafocusCloudKitEnabled: YES
+  PomafocusActivities:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+    dependencies:
+      - package: PomafocusRoot
+        product: PomafocusKit
+    settings:
+      base:
+        INFOPLIST_FILE: Widgets/Info.plist
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        CODE_SIGN_STYLE: Automatic
+    resources:
+      - path: Sources/Assets.xcassets

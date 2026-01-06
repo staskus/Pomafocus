@@ -1,8 +1,8 @@
 #if os(iOS) && !targetEnvironment(macCatalyst)
 import Foundation
 import Combine
-import FamilyControls
-import ManagedSettings
+@preconcurrency import FamilyControls
+@preconcurrency import ManagedSettings
 
 @MainActor
 public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {

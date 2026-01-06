@@ -1,13 +1,13 @@
-#if os(iOS) && !targetEnvironment(macCatalyst)
 import SwiftUI
 import PomafocusKit
 
+@MainActor
 struct PlatformBlockingPanel: View {
-    @ObservedObject private var blocker: PomodoroBlocker
+    @StateObject private var blocker: PomodoroBlocker
     @State private var showingScreenTime = false
 
-    init(blocker: PomodoroBlocker = .shared) {
-        self.blocker = blocker
+    init(blocker: PomodoroBlocker? = nil) {
+        _blocker = StateObject(wrappedValue: blocker ?? PomodoroBlocker.shared)
     }
 
     var body: some View {
@@ -39,4 +39,3 @@ struct PlatformBlockingPanel: View {
         blocker.hasSelection ? blocker.selectionSummary : "No distractions selected"
     }
 }
-#endif

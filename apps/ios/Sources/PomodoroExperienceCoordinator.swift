@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Dispatch
 import PomafocusKit
 
 @MainActor
@@ -25,6 +26,14 @@ final class PomodoroExperienceCoordinator: ObservableObject {
                     self.soundPlayer.playCompletion()
                     self.liveActivityManager.end()
                 }
+            }
+            .store(in: &cancellables)
+
+        session.$remaining
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self, weak session] _ in
+                guard let self, let session, session.isRunning else { return }
+                self.liveActivityManager.startOrUpdate(from: session)
             }
             .store(in: &cancellables)
     }

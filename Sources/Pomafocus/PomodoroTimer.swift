@@ -14,6 +14,7 @@ final class PomodoroTimer {
         guard duration > 0 else { return }
         remaining = duration
         isRunning = true
+        playSound(named: "Pop")
         updateTick()
         onStateChange?(true)
         timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(handleTick), userInfo: nil, repeats: true)
@@ -46,6 +47,10 @@ final class PomodoroTimer {
     private func finish() {
         stop()
         onCompletion?()
-        NSSound(named: NSSound.Name("Glass"))?.play()
+        playSound(named: "Glass")
+    }
+
+    private func playSound(named name: String) {
+        NSSound(named: NSSound.Name(name))?.play()
     }
 }

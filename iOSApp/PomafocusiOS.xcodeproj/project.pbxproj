@@ -81,7 +81,7 @@
 				A70F3394375D40E7A7997AE1 /* StatusBarController.swift */,
 			);
 			name = "Menu Bar App";
-			path = ../../Sources/Pomafocus;
+			path = ../Sources/Pomafocus;
 			sourceTree = "<group>";
 		};
 		2EFFB787742F4570B100C72D = {

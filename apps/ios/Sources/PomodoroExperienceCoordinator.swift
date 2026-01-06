@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import PomafocusKit
 
+@MainActor
 final class PomodoroExperienceCoordinator: ObservableObject {
     private let soundPlayer = PomodoroSoundPlayer()
     private let liveActivityManager = PomodoroLiveActivityManager()

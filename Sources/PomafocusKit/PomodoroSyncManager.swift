@@ -8,7 +8,7 @@ public final class PomodoroSyncManager {
     public var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)?
     public let deviceIdentifier: String
 
-    private let store: NSUbiquitousKeyValueStore
+    private let store: NSUbiquitousKeyValueStore?
     private let defaults: UserDefaults
     private let notificationCenter: NotificationCenter
     private let cloudSync: PomodoroCloudSyncing
@@ -24,7 +24,7 @@ public final class PomodoroSyncManager {
     }
 
     init(
-        store: NSUbiquitousKeyValueStore = .default,
+        store: NSUbiquitousKeyValueStore? = .default,
         defaults: UserDefaults = .standard,
         notificationCenter: NotificationCenter = .default,
         cloudSync: PomodoroCloudSyncing? = nil
@@ -50,18 +50,20 @@ public final class PomodoroSyncManager {
     public func start() {
         guard !observing else { return }
         observing = true
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(storeDidChange(_:)),
-            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
-            object: store
-        )
-        store.synchronize()
+        if let store {
+            notificationCenter.addObserver(
+                self,
+                selector: #selector(storeDidChange(_:)),
+                name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+                object: store
+            )
+            store.synchronize()
+        }
         cloudSync.start()
     }
 
     public func currentState() -> PomodoroSharedState {
-        if let data = store.data(forKey: Keys.state),
+        if let data = data(forKey: Keys.state),
            let decoded = try? decoder.decode(PomodoroSharedState.self, from: data) {
             return decoded
         }
@@ -76,7 +78,7 @@ public final class PomodoroSyncManager {
     }
 
     public func currentPreferences() -> PomodoroPreferencesSnapshot {
-        if let data = store.data(forKey: Keys.preferences),
+        if let data = data(forKey: Keys.preferences),
            let decoded = try? decoder.decode(PomodoroPreferencesSnapshot.self, from: data) {
             defaults.set(decoded.minutes, forKey: Keys.fallbackMinutes)
             return decoded
@@ -120,14 +122,12 @@ public final class PomodoroSyncManager {
 
     private func saveState(_ state: PomodoroSharedState) {
         guard let data = try? encoder.encode(state) else { return }
-        store.set(data, forKey: Keys.state)
-        store.synchronize()
+        set(data, forKey: Keys.state)
     }
 
     private func savePreferences(_ preferences: PomodoroPreferencesSnapshot) {
         guard let data = try? encoder.encode(preferences) else { return }
-        store.set(data, forKey: Keys.preferences)
-        store.synchronize()
+        set(data, forKey: Keys.preferences)
     }
 
     private func storedFallbackMinutes() -> Int {
@@ -159,6 +159,23 @@ public final class PomodoroSyncManager {
             default:
                 break
             }
+        }
+    }
+
+    private func data(forKey key: String) -> Data? {
+        if let store {
+            return store.data(forKey: key)
+        } else {
+            return defaults.data(forKey: key)
+        }
+    }
+
+    private func set(_ data: Data, forKey key: String) {
+        if let store {
+            store.set(data, forKey: key)
+            store.synchronize()
+        } else {
+            defaults.set(data, forKey: key)
         }
     }
 

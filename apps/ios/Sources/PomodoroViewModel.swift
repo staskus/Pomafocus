@@ -1,5 +1,6 @@
 import AudioToolbox
 import Foundation
+import PomafocusKit
 
 @MainActor
 final class PomodoroViewModel: ObservableObject {

@@ -1,0 +1,39 @@
+name: PomafocusMac
+options:
+  bundleIdPrefix: com.staskus.pomafocus
+  deploymentTarget:
+    macOS: "13.0"
+
+packages:
+  PomafocusKit:
+    path: ../..
+
+schemes:
+  PomafocusMac:
+    shared: true
+    build:
+      targets:
+        PomafocusMac: all
+
+targets:
+  PomafocusMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: ../../Sources/Pomafocus
+    resources:
+      - path: ../../Resources/AppIcon.icns
+    dependencies:
+      - package: PomafocusKit
+        product: PomafocusKit
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: PomafocusMac.entitlements
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.staskus.pomafocus.mac
+        SWIFT_VERSION: "5.10"
+        OTHER_LDFLAGS:
+          - "-framework"
+          - Carbon
+        INFOPLIST_FILE: ../../Resources/Info.plist

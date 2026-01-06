@@ -18,6 +18,15 @@ Create a distributable app bundle (with Info.plist and icon) by running:
 
 The script outputs `dist/Pomafocus.app`, which you can drag into `/Applications`. The bundle inherits the accessory-style behavior (dock-less window) from the executable, so it lives solely in the menu bar once launched.
 
+### macOS Xcode Project (optional)
+
+Prefer working inside an app target? Generate a disposable Xcode project with:
+
+```sh
+./Scripts/generate_macos_project.sh
+open apps/macos/PomafocusMac.xcodeproj
+```
+
 ### iOS App (XcodeGen)
 
 The SwiftUI companion lives under `apps/ios`. Generate the project on demand:

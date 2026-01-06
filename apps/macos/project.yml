@@ -36,4 +36,4 @@ targets:
         OTHER_LDFLAGS:
           - "-framework"
           - Carbon
-        INFOPLIST_FILE: ../../Resources/Info.plist
+        INFOPLIST_FILE: Info.plist

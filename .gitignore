@@ -15,6 +15,9 @@ apps/ios/*.xcodeproj/
 apps/ios/*.xcworkspace/
 apps/ios/.swiftpm/
 
+# Generated macOS/iOS workspace
+apps/*.xcworkspace/
+
 # Generated macOS projects
 apps/macos/*.xcodeproj/
 apps/macos/*.xcworkspace/

@@ -38,6 +38,17 @@ open apps/ios/Pomafocus.xcodeproj
 
 Select the `Pomafocus` scheme, choose any iPhone/iPad destination (or a plugged-in device), and run. The project references the shared Swift package at the repo root, so macOS + iOS stay in sync automatically.
 
+### Unified Xcode Workspace
+
+Generate both projects plus a shared workspace with:
+
+```sh
+./Scripts/generate_workspace.sh
+open apps/Pomafocus.xcworkspace
+```
+
+Opening the workspace lets you flip between the macOS and iOS schemes without juggling separate windows.
+
 ### iCloud Sync Setup
 
 Both apps rely on `NSUbiquitousKeyValueStore` for sync, which requires iCloud Key-Value storage to be enabled:

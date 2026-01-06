@@ -7,9 +7,11 @@ import PomafocusKit
 final class PomodoroExperienceCoordinator: ObservableObject {
     private let soundPlayer = PomodoroSoundPlayer()
     private let liveActivityManager = PomodoroLiveActivityManager()
+    private let session: PomodoroSessionController
     private var cancellables: Set<AnyCancellable> = []
 
     init(session: PomodoroSessionController) {
+        self.session = session
         liveActivityManager.bind(to: session)
 
         session.events

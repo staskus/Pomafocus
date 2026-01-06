@@ -7,22 +7,27 @@ struct PomafocusActivityView: View {
     let context: ActivityViewContext<PomodoroActivityAttributes>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Pomafocus")
-                .font(.headline)
-                .foregroundColor(.white.opacity(0.8))
-            timerLabel
-            timerProgress
+        ZStack {
+            ContainerRelativeShape()
+                .fill(
+                    LinearGradient(
+                        colors: [Color("AccentDeep"), Color("AccentBright")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Pomafocus")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.9))
+                timerLabel
+                timerProgress
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [Color("AccentDeep"), Color("AccentBright")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .activityBackgroundTint(.clear)
+        .activitySystemActionForegroundColor(.white)
     }
 
     private var timerLabel: some View {
@@ -79,6 +84,7 @@ struct PomafocusActivities: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PomodoroActivityAttributes.self) { context in
             PomafocusActivityView(context: context)
+                .contentMargins(.all, 12)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.center) {
@@ -113,5 +119,12 @@ private extension ActivityViewContext where Attributes == PomodoroActivityAttrib
             return nil
         }
         return start...end
+    }
+}
+
+@main
+struct PomafocusActivitiesBundle: WidgetBundle {
+    var body: some Widget {
+        PomafocusActivities()
     }
 }

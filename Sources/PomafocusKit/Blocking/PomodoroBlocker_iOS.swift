@@ -1,4 +1,4 @@
-#if os(iOS) && targetEnvironment(macCatalyst)
+#if os(iOS) && !targetEnvironment(macCatalyst)
 import Foundation
 import Combine
 import FamilyControls
@@ -20,7 +20,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     private let authorizationCenter = AuthorizationCenter.shared
     private let store = ManagedSettingsStore()
     private let defaults: UserDefaults
-    private let selectionKey = "pomafocus.screentime.macos.selection"
+    private let selectionKey = "pomafocus.screenTime.selection"
     private var isBlocking = false
 
     private init(defaults: UserDefaults = .standard) {
@@ -58,8 +58,8 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     }
 
     public var hasSelection: Bool {
-        !selection.webDomainTokens.isEmpty ||
         !selection.applicationTokens.isEmpty ||
+        !selection.webDomainTokens.isEmpty ||
         !selection.categoryTokens.isEmpty
     }
 

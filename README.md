@@ -5,7 +5,7 @@ Modern SwiftUI Pomodoro client for iOS plus a native AppKit menu bar companion o
 - A shared gradient UI, progress ring, and Screen Time selector on iOS.
 - CloudKit-backed state/preferences sync plus NSUbiquitousKeyValueStore fallback.
 - Live Activities on iPhone (Lock Screen + Dynamic Island) that continue even when the session originates on macOS.
-- Menu bar time indicator, a global `⌘⌃P` hotkey, and hosts-based website blocking on macOS.
+- Menu bar time indicator plus a global `⌘⌃P` hotkey on macOS.
 - Screen Time-based app/site blocking on iOS (per-device selections) that follow remote sessions via silent push.
 
 ## Projects & Tooling
@@ -44,7 +44,7 @@ Select the `Pomafocus` scheme, choose a device/simulator, and run. Enable “Bac
 open apps/macos/PomafocusMac.xcodeproj
 ```
 
-Build/run the `PomafocusMac` scheme on the `My Mac` destination. The app runs headless in the menu bar, registers the global hotkey, and exposes Preferences for session tuning plus website blocking (editing the hosts file requires admin approval the first time you run a session with sites configured).
+Build/run the `PomafocusMac` scheme on the `My Mac` destination. The app runs headless in the menu bar, registers the global hotkey, and exposes Preferences for session tuning.
 
 ### Swift Package Tests
 
@@ -62,11 +62,9 @@ CloudKit is enabled in Release by default; Debug can flip it via the Info.plist 
 
 If the entitlement or container is unavailable, the app drops back to NSUbiquitousKeyValueStore (still synced via iCloud Drive, just slower and without push wakes).
 
-## Screen Time & Website Blocking
+## Screen Time Blocking (iOS)
 
-On iOS the shared `PomodoroBlocker` wraps `FamilyControls`/`ManagedSettings`. Open **Block distractions…** in the mobile app to choose apps, domains, or categories to shield whenever a session is active on that device. Silent CloudKit pushes keep the selector in sync, so blocking automatically starts/stops even when a session begins on macOS.
-
-On macOS the menu bar build stores a per-device domain list. Whenever a session starts it rewrites `/etc/hosts` (between `# BEGIN POMAFOCUS` and `# END POMAFOCUS`) to point those domains to `localhost`, flushes DNS, and restores the pristine file as soon as the focus session ends. Because this requires elevated privileges, macOS prompts for administrator approval the first time you run a blocked session.
+Only the iOS app integrates with `FamilyControls`/`ManagedSettings`. Open **Block distractions…** to choose apps, domains, or categories to shield whenever a session is active on that device. Silent CloudKit pushes keep the selector in sync, so blocking automatically starts/stops even when a session begins on macOS, but the macOS app currently does not perform local blocking.
 
 ## Live Activities (iOS)
 

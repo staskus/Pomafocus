@@ -12,7 +12,7 @@ struct PlatformBlockingPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Distraction control", systemImage: "shield.righthalf.fill")
+            Label("Website blocking (Mac)", systemImage: "shield.righthalf.fill")
                 .foregroundColor(.white.opacity(0.9))
                 .font(.headline)
             Text(blockingSummary)
@@ -22,7 +22,7 @@ struct PlatformBlockingPanel: View {
             Button {
                 showingSettings = true
             } label: {
-                Text("Manage Screen Time access")
+                Text("Edit blocked websites")
                     .font(.subheadline.bold())
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -36,7 +36,7 @@ struct PlatformBlockingPanel: View {
     }
 
     private var blockingSummary: String {
-        blocker.hasSelection ? blocker.selectionSummary : "No distractions configured"
+        blocker.selectionSummary
     }
 }
 #endif

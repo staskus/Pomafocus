@@ -165,9 +165,15 @@ public struct PomodoroDashboardView: View {
     }
 
     private var deepBreathProgress: Double? {
-        guard let remaining = session.deepBreathRemaining else { return nil }
-        let elapsed = PomodoroSessionController.deepBreathDuration - remaining
-        return min(max(elapsed / PomodoroSessionController.deepBreathDuration, 0), 1)
+        if let remaining = session.deepBreathRemaining {
+            let elapsed = PomodoroSessionController.deepBreathDuration - remaining
+            return min(max(elapsed / PomodoroSessionController.deepBreathDuration, 0), 1)
+        }
+        if session.deepBreathReady, let confirmation = session.deepBreathConfirmationRemaining {
+            let elapsed = PomodoroSessionController.deepBreathConfirmationWindow - confirmation
+            return min(max(elapsed / PomodoroSessionController.deepBreathConfirmationWindow, 0), 1)
+        }
+        return nil
     }
 
     private var deepBreathBinding: Binding<Bool> {

@@ -11,6 +11,7 @@ public final class PomodoroSessionController: ObservableObject {
     @Published public private(set) var deepBreathEnabled: Bool
     @Published public private(set) var deepBreathRemaining: TimeInterval?
     @Published public private(set) var deepBreathReady: Bool = false
+    @Published public private(set) var deepBreathConfirmationRemaining: TimeInterval?
 
     public var remainingDisplay: String {
         PomodoroSessionController.format(seconds: Int(remaining))
@@ -45,21 +46,25 @@ public final class PomodoroSessionController: ObservableObject {
 
     private let timer: PomodoroTimer
     private let deepBreathTimer: PomodoroTimer
+    private let deepBreathConfirmTimer: PomodoroTimer
     private let syncManager: PomodoroSyncManaging
     private let blocker: PomodoroBlocking
     private var activeDuration: Int = 0
     public static let deepBreathDuration: TimeInterval = 30
+    public static let deepBreathConfirmationWindow: TimeInterval = 60
     private let deepBreathClock: () -> Date
 
     public init(
         timer: PomodoroTimer? = nil,
         deepBreathTimer: PomodoroTimer? = nil,
+        deepBreathConfirmTimer: PomodoroTimer? = nil,
         deepBreathClock: @escaping () -> Date = Date.init,
         syncManager: PomodoroSyncManaging? = nil,
         blocker: PomodoroBlocking? = nil
     ) {
         self.timer = timer ?? PomodoroTimer()
         self.deepBreathTimer = deepBreathTimer ?? PomodoroTimer()
+        self.deepBreathConfirmTimer = deepBreathConfirmTimer ?? PomodoroTimer()
         self.syncManager = syncManager ?? PomodoroSyncManager.shared
         self.blocker = blocker ?? PomodoroBlocker.shared
         self.deepBreathClock = deepBreathClock
@@ -73,7 +78,7 @@ public final class PomodoroSessionController: ObservableObject {
         self.isRunning = state.isRunning
 
         bindTimer()
-        configureDeepBreathTimer()
+        configureDeepBreathTimers()
         configureSync()
 
         if state.isRunning, let startDate = state.startedAt {
@@ -153,19 +158,34 @@ public final class PomodoroSessionController: ObservableObject {
         }
     }
 
-    private func configureDeepBreathTimer() {
+    private func configureDeepBreathTimers() {
         deepBreathTimer.onTick = { [weak self] remaining in
             self?.deepBreathRemaining = remaining
         }
         deepBreathTimer.onCompletion = { [weak self] in
             guard let self else { return }
-            self.deepBreathRemaining = 0
-            self.deepBreathReady = true
+            self.deepBreathRemaining = nil
+            self.beginDeepBreathConfirmation()
         }
         deepBreathTimer.onStateChange = { [weak self] running in
             guard let self else { return }
             if !running && !self.deepBreathReady {
                 self.deepBreathRemaining = nil
+            }
+        }
+
+        deepBreathConfirmTimer.onTick = { [weak self] remaining in
+            self?.deepBreathConfirmationRemaining = remaining
+        }
+        deepBreathConfirmTimer.onCompletion = { [weak self] in
+            guard let self else { return }
+            self.deepBreathReady = false
+            self.deepBreathConfirmationRemaining = nil
+        }
+        deepBreathConfirmTimer.onStateChange = { [weak self] running in
+            guard let self else { return }
+            if !running {
+                self.deepBreathConfirmationRemaining = nil
             }
         }
     }
@@ -222,15 +242,27 @@ public final class PomodoroSessionController: ObservableObject {
     }
 
     private func beginDeepBreathCountdown() {
+        deepBreathConfirmTimer.stop()
         deepBreathReady = false
         deepBreathRemaining = PomodoroSessionController.deepBreathDuration
         deepBreathTimer.start(duration: PomodoroSessionController.deepBreathDuration, startDate: deepBreathClock())
     }
 
+    private func beginDeepBreathConfirmation() {
+        deepBreathReady = true
+        deepBreathConfirmationRemaining = PomodoroSessionController.deepBreathConfirmationWindow
+        deepBreathConfirmTimer.start(
+            duration: PomodoroSessionController.deepBreathConfirmationWindow,
+            startDate: deepBreathClock()
+        )
+    }
+
     private func resetDeepBreath() {
         deepBreathTimer.stop()
+        deepBreathConfirmTimer.stop()
         deepBreathRemaining = nil
         deepBreathReady = false
+        deepBreathConfirmationRemaining = nil
     }
 
     private func updateDisplay() {

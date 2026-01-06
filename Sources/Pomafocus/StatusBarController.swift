@@ -9,6 +9,7 @@ final class StatusBarController {
     private let menu = NSMenu()
     private let timer = PomodoroTimer()
     private let deepBreathTimer = PomodoroTimer()
+    private let deepBreathConfirmTimer = PomodoroTimer()
     private let settings = PomodoroSettings()
     private let hotkeyManager = HotkeyManager()
     private let syncManager = PomodoroSyncManager.shared
@@ -21,6 +22,7 @@ final class StatusBarController {
     private var activeDuration: Int = 0
     private var deepBreathRemaining: TimeInterval?
     private var deepBreathReady = false
+    private var deepBreathConfirmationRemaining: TimeInterval?
 
     private lazy var toggleItem: NSMenuItem = {
         let item = NSMenuItem(title: "Start Pomodoro", action: #selector(toggleTimer), keyEquivalent: "")
@@ -197,18 +199,27 @@ final class StatusBarController {
 
     private func updateStatusTitle(remaining: TimeInterval? = nil) {
         guard let button = statusItem.button else { return }
-        if currentSnapshot.deepBreathEnabled, deepBreathRemaining != nil || deepBreathReady {
-            if deepBreathReady {
-                button.title = "Deep breath complete"
-            } else if let breath = deepBreathRemaining {
-                button.title = "Breath \(formattedTime(from: Int(breath)))"
-            }
-            return
-        }
         if timer.isRunning {
             let secondsLeft = Int(remaining ?? timer.remaining)
-            button.title = formattedTime(from: secondsLeft)
+            var title = formattedTime(from: secondsLeft)
+            if currentSnapshot.deepBreathEnabled {
+                if let breath = deepBreathRemaining {
+                    title += " (breathe \(formattedTime(from: Int(ceil(breath)))))"
+                } else if deepBreathReady, let confirm = deepBreathConfirmationRemaining {
+                    title += " (confirm \(formattedTime(from: Int(ceil(confirm)))))"
+                }
+            }
+            button.title = title
         } else {
+            if currentSnapshot.deepBreathEnabled {
+                if let breath = deepBreathRemaining {
+                    button.title = "Breathe \(formattedTime(from: Int(ceil(breath))))"
+                    return
+                } else if deepBreathReady, let confirm = deepBreathConfirmationRemaining {
+                    button.title = "Confirm \(formattedTime(from: Int(ceil(confirm))))"
+                    return
+                }
+            }
             button.title = "Pomafocus"
         }
     }
@@ -234,8 +245,32 @@ final class StatusBarController {
         }
         deepBreathTimer.onCompletion = { [weak self] in
             guard let self else { return }
-            self.deepBreathRemaining = 0
-            self.deepBreathReady = true
+            self.deepBreathRemaining = nil
+            self.beginDeepBreathConfirmation()
+        }
+        deepBreathTimer.onStateChange = { [weak self] running in
+            guard let self else { return }
+            if !running && !self.deepBreathReady {
+                self.deepBreathRemaining = nil
+            }
+            self.updateStatusTitle()
+        }
+
+        deepBreathConfirmTimer.onTick = { [weak self] remaining in
+            self?.deepBreathConfirmationRemaining = remaining
+            self?.updateStatusTitle()
+        }
+        deepBreathConfirmTimer.onCompletion = { [weak self] in
+            guard let self else { return }
+            self.deepBreathReady = false
+            self.deepBreathConfirmationRemaining = nil
+            self.updateStatusTitle()
+        }
+        deepBreathConfirmTimer.onStateChange = { [weak self] running in
+            guard let self else { return }
+            if !running {
+                self.deepBreathConfirmationRemaining = nil
+            }
             self.updateStatusTitle()
         }
     }
@@ -249,16 +284,27 @@ final class StatusBarController {
     }
 
     private func beginDeepBreathCountdown() {
+        deepBreathConfirmTimer.stop()
         deepBreathReady = false
+        deepBreathConfirmationRemaining = nil
         deepBreathRemaining = PomodoroSessionController.deepBreathDuration
         deepBreathTimer.start(duration: PomodoroSessionController.deepBreathDuration)
         updateStatusTitle()
     }
 
+    private func beginDeepBreathConfirmation() {
+        deepBreathReady = true
+        deepBreathConfirmationRemaining = PomodoroSessionController.deepBreathConfirmationWindow
+        deepBreathConfirmTimer.start(duration: PomodoroSessionController.deepBreathConfirmationWindow)
+        updateStatusTitle()
+    }
+
     private func resetDeepBreath() {
         deepBreathTimer.stop()
+        deepBreathConfirmTimer.stop()
         deepBreathRemaining = nil
         deepBreathReady = false
+        deepBreathConfirmationRemaining = nil
         updateStatusTitle()
     }
 }

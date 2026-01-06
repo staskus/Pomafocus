@@ -70,11 +70,14 @@ import Testing
         var deepNow = Date()
         let deepTicker = MockTicker()
         let deepTimer = PomodoroTimer(now: { deepNow }, ticker: deepTicker)
+        let confirmTicker = MockTicker()
+        let confirmTimer = PomodoroTimer(now: { deepNow }, ticker: confirmTicker)
         let sync = MockSyncManager()
         let blocker = MockBlocker()
         let controller = PomodoroSessionController(
             timer: timer,
             deepBreathTimer: deepTimer,
+            deepBreathConfirmTimer: confirmTimer,
             deepBreathClock: { deepNow },
             syncManager: sync,
             blocker: blocker
@@ -90,13 +93,52 @@ import Testing
         controller.toggleTimer()
         #expect(controller.isRunning == true)
 
-        deepNow = deepNow.addingTimeInterval(30)
+        deepNow = deepNow.addingTimeInterval(PomodoroSessionController.deepBreathDuration)
+        deepTicker.fire()
+        await Task.yield()
+        #expect(controller.deepBreathReady == true)
+        #expect(controller.deepBreathConfirmationRemaining != nil)
+
+        controller.toggleTimer()
+        #expect(controller.isRunning == false)
+        #expect(controller.deepBreathConfirmationRemaining == nil)
+    }
+
+    @Test func deepBreathConfirmationExpires() async {
+        let timer = PomodoroTimer()
+        var deepNow = Date()
+        let deepTicker = MockTicker()
+        let deepTimer = PomodoroTimer(now: { deepNow }, ticker: deepTicker)
+        let confirmTicker = MockTicker()
+        let confirmTimer = PomodoroTimer(now: { deepNow }, ticker: confirmTicker)
+        let sync = MockSyncManager()
+        let blocker = MockBlocker()
+        let controller = PomodoroSessionController(
+            timer: timer,
+            deepBreathTimer: deepTimer,
+            deepBreathConfirmTimer: confirmTimer,
+            deepBreathClock: { deepNow },
+            syncManager: sync,
+            blocker: blocker
+        )
+
+        controller.setDeepBreathEnabled(true)
+        controller.toggleTimer()
+        controller.toggleTimer()
+
+        deepNow = deepNow.addingTimeInterval(PomodoroSessionController.deepBreathDuration)
         deepTicker.fire()
         await Task.yield()
         #expect(controller.deepBreathReady == true)
 
+        deepNow = deepNow.addingTimeInterval(PomodoroSessionController.deepBreathConfirmationWindow)
+        confirmTicker.fire()
+        await Task.yield()
+        #expect(controller.deepBreathReady == false)
+        #expect(controller.deepBreathConfirmationRemaining == nil)
+
         controller.toggleTimer()
-        #expect(controller.isRunning == false)
+        #expect(controller.deepBreathRemaining != nil)
     }
 }
 

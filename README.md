@@ -18,9 +18,12 @@ Create a distributable app bundle (with Info.plist and icon) by running:
 
 The script outputs `dist/Pomafocus.app`, which you can drag into `/Applications`. The bundle inherits the accessory-style behavior (dock-less window) from the executable, so it lives solely in the menu bar once launched.
 
-### iOS App
+### Xcode App Targets
 
-An iOS companion lives under `iOSApp/PomafocusiOS.xcodeproj`. Open the project in Xcode 15+, select a simulator or device, and hit Run. The SwiftUI interface lets you start/stop the shared Pomodoro session and change the global duration.
+An Xcode workspace lives under `iOSApp/PomafocusiOS.xcodeproj` and now ships with two targets:
+
+- `PomafocusMac` — the menu bar app wired up for macOS signing/iCloud/Push. Select the scheme, choose My Mac (or a connected Mac via Playgrounds), and build/run directly from Xcode instead of using `swift run`.
+- `PomafocusiOS` — the SwiftUI companion for iPhone/iPad. Pick a simulator or physical device and hit Run to toggle the shared timer and adjust duration.
 
 ### iCloud Sync Setup
 

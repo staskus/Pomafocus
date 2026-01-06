@@ -14,6 +14,17 @@
 		97923C82A2104430A18416A3 /* PomodoroSharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49ED3A160B3E493EA6AEB1AB /* PomodoroSharedModels.swift */; };
 		E3A29B4E646B486599142E7C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C861E288419349D59C7E46E1 /* Assets.xcassets */; };
 		F7584C03B12645AD98D8D196 /* PomafocusiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B95DAE4F856D463099577503 /* PomafocusiOSApp.swift */; };
+		1250C2F3E2604D7F9BA085C3 /* PomodoroSharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49ED3A160B3E493EA6AEB1AB /* PomodoroSharedModels.swift */; };
+		148C9F39A8BF41A2AF39D55D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F7EB8F2DEFD4D8DB4B014C7 /* AppDelegate.swift */; };
+		1C482AB7339A44ED81E3240C /* PomodoroSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8137C94747A4427B937C4488 /* PomodoroSettings.swift */; };
+		3CFF0E27E41F434984A7C987 /* HotkeyField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC7A288C54524266B2169C70 /* HotkeyField.swift */; };
+		4B6D1C61F4EB4C54B4893059 /* Hotkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19728B82AA0B4550A348FFD6 /* Hotkey.swift */; };
+		5F4448C76B4142E894C6C60B /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E64D03618A94E61A4FCD0D9 /* PreferencesWindowController.swift */; };
+		6C55E2781E67419781A8A6F1 /* PomodoroTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DF21E8709B4D63958CDB9F /* PomodoroTimer.swift */; };
+		873711E48A6D4B56A5A8CF6C /* PomodoroSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847FF638E9B94262B94B573E /* PomodoroSyncManager.swift */; };
+		8D71086D05064BCCB295ED0E /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C29B24A13DA48C98969F991 /* HotkeyManager.swift */; };
+		C665151642144E7AA0DB0D9B /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70F3394375D40E7A7997AE1 /* StatusBarController.swift */; };
+		D6F4B104468C4A89886A84E7 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = D72608FDFF2C48208E330C05 /* AppIcon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +36,17 @@
 		6AD68413344F4F6BB02ED37F /* PomafocusiOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PomafocusiOS.entitlements; sourceTree = "<group>"; };
 		847FF638E9B94262B94B573E /* PomodoroSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroSyncManager.swift; sourceTree = "<group>"; };
 		B95DAE4F856D463099577503 /* PomafocusiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomafocusiOSApp.swift; sourceTree = "<group>"; };
+		D72608FDFF2C48208E330C05 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = AppIcon.icns; path = ../Resources/AppIcon.icns; sourceTree = SOURCE_ROOT; };
+		5F7EB8F2DEFD4D8DB4B014C7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		19728B82AA0B4550A348FFD6 /* Hotkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hotkey.swift; sourceTree = "<group>"; };
+		CC7A288C54524266B2169C70 /* HotkeyField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyField.swift; sourceTree = "<group>"; };
+		6C29B24A13DA48C98969F991 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		8137C94747A4427B937C4488 /* PomodoroSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroSettings.swift; sourceTree = "<group>"; };
+		5E64D03618A94E61A4FCD0D9 /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		A70F3394375D40E7A7997AE1 /* StatusBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarController.swift; sourceTree = "<group>"; };
+		907EBB2E03534D5D9FEE5E79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		59D4857DD7B548288D2FAE3F /* PomafocusMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PomafocusMac.entitlements; sourceTree = "<group>"; };
+		3DD3B1CC8A7442E280CE8903 /* PomafocusMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PomafocusMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C861E288419349D59C7E46E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F3B4B6A9CDF947A480FF30C6 /* PomodoroViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -37,12 +59,36 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B25ECC3026F4442B9AF050B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2A4BAC7E6B28457487AC7D9E /* Menu Bar App */ = {
+			isa = PBXGroup;
+			children = (
+				5F7EB8F2DEFD4D8DB4B014C7 /* AppDelegate.swift */,
+				19728B82AA0B4550A348FFD6 /* Hotkey.swift */,
+				CC7A288C54524266B2169C70 /* HotkeyField.swift */,
+				6C29B24A13DA48C98969F991 /* HotkeyManager.swift */,
+				8137C94747A4427B937C4488 /* PomodoroSettings.swift */,
+				5E64D03618A94E61A4FCD0D9 /* PreferencesWindowController.swift */,
+				A70F3394375D40E7A7997AE1 /* StatusBarController.swift */,
+			);
+			name = "Menu Bar App";
+			path = ../../Sources/Pomafocus;
+			sourceTree = "<group>";
+		};
 		2EFFB787742F4570B100C72D = {
 			isa = PBXGroup;
 			children = (
+				2A4BAC7E6B28457487AC7D9E /* Menu Bar App */,
+				54379937F8EF4F8CA50CB0AB /* PomafocusMac */,
 				66BB5C0451D846998AF81A59 /* PomafocusiOS */,
 				B764B7A907F64031AE309AF9 /* Products */,
 			);
@@ -77,8 +123,20 @@
 			isa = PBXGroup;
 			children = (
 				629FCFBE28A44DE29337BA17 /* PomafocusiOS.app */,
+				3DD3B1CC8A7442E280CE8903 /* PomafocusMac.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		54379937F8EF4F8CA50CB0AB /* PomafocusMac */ = {
+			isa = PBXGroup;
+			children = (
+				907EBB2E03534D5D9FEE5E79 /* Info.plist */,
+				59D4857DD7B548288D2FAE3F /* PomafocusMac.entitlements */,
+				D72608FDFF2C48208E330C05 /* AppIcon.icns */,
+			);
+			name = PomafocusMac;
+			path = PomafocusMac;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -101,6 +159,23 @@
 			productReference = 629FCFBE28A44DE29337BA17 /* PomafocusiOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		94AEEB1AEA1A441ABA20CE47 /* PomafocusMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 164092A7C73D4E57A221A6A0 /* Build configuration list for PBXNativeTarget "PomafocusMac" */;
+			buildPhases = (
+				EBCEA245A6E94692BD80F584 /* Sources */,
+				B25ECC3026F4442B9AF050B1 /* Frameworks */,
+				C2EF9AC47B2B4FE2B499EB64 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PomafocusMac;
+			productName = PomafocusMac;
+			productReference = 3DD3B1CC8A7442E280CE8903 /* PomafocusMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -111,6 +186,17 @@
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
 					DF83737738804F7896F28A4F = {
+						CreatedOnToolsVersion = 15.3.0;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
+					};
+					94AEEB1AEA1A441ABA20CE47 = {
 						CreatedOnToolsVersion = 15.3.0;
 						SystemCapabilities = {
 							com.apple.Push = {
@@ -136,6 +222,7 @@
 			projectRoot = "";
 			targets = (
 				DF83737738804F7896F28A4F /* PomafocusiOS */,
+				94AEEB1AEA1A441ABA20CE47 /* PomafocusMac */,
 			);
 		};
 /* End PBXProject section */
@@ -146,6 +233,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				E3A29B4E646B486599142E7C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C2EF9AC47B2B4FE2B499EB64 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D6F4B104468C4A89886A84E7 /* AppIcon.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -162,6 +257,23 @@
 				6AD68413344F4F6BB02ED37E /* PomodoroTimer.swift in Sources */,
 				97923C82A2104430A18416A3 /* PomodoroSharedModels.swift in Sources */,
 				7123CC04D4F343F488EE7BF4 /* PomodoroSyncManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EBCEA245A6E94692BD80F584 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				148C9F39A8BF41A2AF39D55D /* AppDelegate.swift in Sources */,
+				4B6D1C61F4EB4C54B4893059 /* Hotkey.swift in Sources */,
+				3CFF0E27E41F434984A7C987 /* HotkeyField.swift in Sources */,
+				8D71086D05064BCCB295ED0E /* HotkeyManager.swift in Sources */,
+				1C482AB7339A44ED81E3240C /* PomodoroSettings.swift in Sources */,
+				5F4448C76B4142E894C6C60B /* PreferencesWindowController.swift in Sources */,
+				C665151642144E7AA0DB0D9B /* StatusBarController.swift in Sources */,
+				6C55E2781E67419781A8A6F1 /* PomodoroTimer.swift in Sources */,
+				1250C2F3E2604D7F9BA085C3 /* PomodoroSharedModels.swift in Sources */,
+				873711E48A6D4B56A5A8CF6C /* PomodoroSyncManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,6 +424,66 @@
 			};
 			name = Release;
 		};
+		D81B40FBBA5C43ED8279580E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PomafocusMac/PomafocusMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L4KYCD4RPZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PomafocusMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.staskus.pomafocus;
+				PRODUCT_NAME = Pomafocus;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		57F5FCF8FBBE4BABBD7FDD89 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PomafocusMac/PomafocusMac.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L4KYCD4RPZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PomafocusMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.staskus.pomafocus;
+				PRODUCT_NAME = Pomafocus;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -329,6 +501,15 @@
 			buildConfigurations = (
 				894918A431974C16A9DFEC1A /* Debug */,
 				C8D5FCB459A7451EB3F2310E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		164092A7C73D4E57A221A6A0 /* Build configuration list for PBXNativeTarget "PomafocusMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D81B40FBBA5C43ED8279580E /* Debug */,
+				57F5FCF8FBBE4BABBD7FDD89 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

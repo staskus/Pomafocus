@@ -10,7 +10,10 @@ final class PomodoroLiveActivityManager {
     private let logger = Logger(subsystem: "com.staskus.pomafocus", category: "LiveActivity")
 
     func bind(to session: PomodoroSessionController) {
-        startOrUpdate(from: session)
+        Task { @MainActor [weak self] in
+            await self?.reconcileExistingActivities()
+            self?.startOrUpdate(from: session)
+        }
     }
 
     func startOrUpdate(from session: PomodoroSessionController) {
@@ -29,6 +32,7 @@ final class PomodoroLiveActivityManager {
 
         Task { @MainActor [weak self] in
             guard let self else { return }
+            await self.reconcileExistingActivities()
             if let activity = self.activity, session.isRunning {
                 await activity.update(ActivityContent(state: contentState, staleDate: nil))
             } else if session.isRunning {
@@ -57,6 +61,22 @@ final class PomodoroLiveActivityManager {
     func end() {
         Task { @MainActor [weak self] in
             await self?.end()
+        }
+    }
+
+    private func reconcileExistingActivities() async {
+        let existing = Activity<PomodoroActivityAttributes>.activities
+        if let first = existing.first {
+            if activity?.id != first.id {
+                activity = first
+            }
+            if existing.count > 1 {
+                for duplicate in existing.dropFirst() {
+                    await duplicate.end(dismissalPolicy: .immediate)
+                }
+            }
+        } else {
+            activity = nil
         }
     }
 }

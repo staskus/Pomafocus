@@ -1,5 +1,7 @@
 import AppKit
+#if canImport(PomafocusKit)
 import PomafocusKit
+#endif
 
 @MainActor
 final class StatusBarController {

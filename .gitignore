@@ -1,9 +1,31 @@
 .DS_Store
+**/.DS_Store
+
 /.build
+/dist
 /Packages
+
+.swiftpm/
 xcuserdata/
 DerivedData/
-.swiftpm/configuration/registries.json
-.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
-dist/
+
+# XcodeGen output
+apps/ios/*.xcodeproj/
+apps/ios/*.xcworkspace/
+apps/ios/.swiftpm/
+
+# SwiftPM builds for macOS/iOS targets
+apps/macos/.build/
+apps/macos/.swiftpm/
+
+# Fastlane artifacts (future-proof)
+apps/ios/fastlane/README.md
+apps/ios/fastlane/report.xml
+apps/ios/fastlane/Preview.html
+apps/ios/fastlane/screenshots/
+apps/ios/fastlane/test_output/
+apps/ios/fastlane/logs/
+apps/ios/*.ipa
+apps/ios/*.dSYM.zip
+apps/ios/*.mobileprovision

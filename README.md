@@ -2,7 +2,7 @@
 
 A lightweight macOS menu bar Pomodoro timer with configurable session length and a global hotkey toggle.
 
-### Running
+### macOS (Swift Package)
 
 ```sh
 swift run
@@ -18,12 +18,16 @@ Create a distributable app bundle (with Info.plist and icon) by running:
 
 The script outputs `dist/Pomafocus.app`, which you can drag into `/Applications`. The bundle inherits the accessory-style behavior (dock-less window) from the executable, so it lives solely in the menu bar once launched.
 
-### Xcode App Targets
+### iOS App (XcodeGen)
 
-An Xcode workspace lives under `iOSApp/PomafocusiOS.xcodeproj` and now ships with two targets:
+The SwiftUI companion lives under `apps/ios`. Generate the project on demand:
 
-- `PomafocusMac` — the menu bar app wired up for macOS signing/iCloud/Push. Select the scheme, choose My Mac (or a connected Mac via Playgrounds), and build/run directly from Xcode instead of using `swift run`.
-- `PomafocusiOS` — the SwiftUI companion for iPhone/iPad. Pick a simulator or physical device and hit Run to toggle the shared timer and adjust duration.
+```sh
+./Scripts/generate_ios_project.sh
+open apps/ios/Pomafocus.xcodeproj
+```
+
+Select the `Pomafocus` scheme, choose any iPhone/iPad destination (or a plugged-in device), and run. The project references the shared Swift package at the repo root, so macOS + iOS stay in sync automatically.
 
 ### iCloud Sync Setup
 

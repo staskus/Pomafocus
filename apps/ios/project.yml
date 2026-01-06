@@ -1,0 +1,35 @@
+name: Pomafocus
+options:
+  bundleIdPrefix: com.staskus.pomafocus
+  deploymentTarget:
+    iOS: "16.0"
+
+packages:
+  PomafocusKit:
+    path: ../..
+
+schemes:
+  Pomafocus:
+    shared: true
+    build:
+      targets:
+        Pomafocus: all
+
+targets:
+  Pomafocus:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    dependencies:
+      - package: PomafocusKit
+        product: PomafocusKit
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        SWIFT_VERSION: "5.10"
+        CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
+    info:
+      path: Sources/Info.plist

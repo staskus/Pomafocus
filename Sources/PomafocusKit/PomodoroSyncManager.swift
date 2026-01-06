@@ -11,6 +11,7 @@ public final class PomodoroSyncManager {
     private let store: NSUbiquitousKeyValueStore
     private let defaults: UserDefaults
     private let notificationCenter: NotificationCenter
+    private let cloudSync: PomodoroCloudSyncing
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private var observing = false
@@ -22,14 +23,16 @@ public final class PomodoroSyncManager {
         static let fallbackMinutes = "pomodoro.minutes"
     }
 
-    public init(
+    init(
         store: NSUbiquitousKeyValueStore = .default,
         defaults: UserDefaults = .standard,
-        notificationCenter: NotificationCenter = .default
+        notificationCenter: NotificationCenter = .default,
+        cloudSync: PomodoroCloudSyncing? = nil
     ) {
         self.store = store
         self.defaults = defaults
         self.notificationCenter = notificationCenter
+        self.cloudSync = cloudSync ?? CloudKitPomodoroSync()
         if let storedID = defaults.string(forKey: Keys.deviceID) {
             deviceIdentifier = storedID
         } else {
@@ -37,6 +40,7 @@ public final class PomodoroSyncManager {
             defaults.set(identifier, forKey: Keys.deviceID)
             deviceIdentifier = identifier
         }
+        wireCloudCallbacks()
     }
 
     deinit {
@@ -53,6 +57,7 @@ public final class PomodoroSyncManager {
             object: store
         )
         store.synchronize()
+        cloudSync.start()
     }
 
     public func currentState() -> PomodoroSharedState {
@@ -93,6 +98,7 @@ public final class PomodoroSyncManager {
             originIdentifier: deviceIdentifier
         )
         saveState(state)
+        cloudSync.publish(state: state)
     }
 
     public func publishPreferences(minutes: Int) {
@@ -104,6 +110,12 @@ public final class PomodoroSyncManager {
         )
         savePreferences(snapshot)
         onPreferencesChange?(snapshot)
+        cloudSync.publish(preferences: snapshot)
+    }
+
+    @discardableResult
+    public func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) async -> Bool {
+        await cloudSync.handleRemoteNotification(userInfo)
     }
 
     private func saveState(_ state: PomodoroSharedState) {
@@ -149,4 +161,21 @@ public final class PomodoroSyncManager {
             }
         }
     }
+
+private func wireCloudCallbacks() {
+        cloudSync.onStateChange = { [weak self] state in
+            guard let self else { return }
+            if state.originIdentifier == self.deviceIdentifier { return }
+            self.saveState(state)
+            self.onStateChange?(state)
+        }
+        cloudSync.onPreferencesChange = { [weak self] snapshot in
+            guard let self else { return }
+            if snapshot.originIdentifier == self.deviceIdentifier { return }
+            self.savePreferences(snapshot)
+            self.onPreferencesChange?(snapshot)
+        }
+    }
 }
+
+extension PomodoroSyncManager: PomodoroSyncManaging {}

@@ -7,10 +7,12 @@ import Testing
     @Test func publishesPreferencesAndStoresFallback() throws {
         let store = MockStore()
         let defaults = temporaryDefaults()
+        let cloud = MockCloudSync()
         let manager = PomodoroSyncManager(
             store: store,
             defaults: defaults,
-            notificationCenter: NotificationCenter()
+            notificationCenter: NotificationCenter(),
+            cloudSync: cloud
         )
 
         var received: PomodoroPreferencesSnapshot?
@@ -31,14 +33,75 @@ import Testing
     @Test func currentPreferencesFallsBackToStoredMinutes() {
         let defaults = temporaryDefaults()
         defaults.set(42, forKey: "pomodoro.minutes")
+        let cloud = MockCloudSync()
         let manager = PomodoroSyncManager(
             store: MockStore(),
             defaults: defaults,
-            notificationCenter: NotificationCenter()
+            notificationCenter: NotificationCenter(),
+            cloudSync: cloud
         )
 
         let snapshot = manager.currentPreferences()
         #expect(snapshot.minutes == 42)
+    }
+
+    @Test func publishStateForwardsToCloud() {
+        let store = MockStore()
+        let defaults = temporaryDefaults()
+        let cloud = MockCloudSync()
+        let manager = PomodoroSyncManager(
+            store: store,
+            defaults: defaults,
+            notificationCenter: NotificationCenter(),
+            cloudSync: cloud
+        )
+
+        manager.publishState(duration: 1500, startedAt: Date(), isRunning: true)
+        #expect(cloud.publishedStates.count == 1)
+        #expect(cloud.publishedStates.first?.duration == 1500)
+        #expect(cloud.startCount == 0)
+    }
+
+    @Test func cloudStateUpdatesPersistAndEmit() {
+        let store = MockStore()
+        let defaults = temporaryDefaults()
+        let cloud = MockCloudSync()
+        let manager = PomodoroSyncManager(
+            store: store,
+            defaults: defaults,
+            notificationCenter: NotificationCenter(),
+            cloudSync: cloud
+        )
+        var received: PomodoroSharedState?
+        manager.onStateChange = { received = $0 }
+
+        let state = PomodoroSharedState(
+            duration: 600,
+            startedAt: Date(),
+            isRunning: true,
+            updatedAt: Date(),
+            originIdentifier: "remote-device"
+        )
+
+        cloud.triggerState(state)
+
+        #expect(received == state)
+        #expect(manager.currentState() == state)
+    }
+
+    @Test func handleRemoteNotificationDelegatesToCloud() async {
+        let cloud = MockCloudSync()
+        cloud.handleRemoteNotificationResult = true
+        let manager = PomodoroSyncManager(
+            store: MockStore(),
+            defaults: temporaryDefaults(),
+            notificationCenter: NotificationCenter(),
+            cloudSync: cloud
+        )
+
+        let handled = await manager.handleRemoteNotification(["foo": "bar"])
+        #expect(handled == true)
+        #expect(cloud.handleRemoteNotificationCalls == 1)
     }
 }
 
@@ -63,4 +126,40 @@ private func temporaryDefaults() -> UserDefaults {
     let defaults = UserDefaults(suiteName: suite)!
     defaults.removePersistentDomain(forName: suite)
     return defaults
+}
+
+private final class MockCloudSync: PomodoroCloudSyncing {
+    var onStateChange: ((PomodoroSharedState) -> Void)?
+    var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)?
+
+    private(set) var startCount = 0
+    private(set) var publishedStates: [PomodoroSharedState] = []
+    private(set) var publishedPreferences: [PomodoroPreferencesSnapshot] = []
+    var handleRemoteNotificationResult = false
+    private(set) var handleRemoteNotificationCalls = 0
+
+    func start() {
+        startCount += 1
+    }
+
+    func publish(state: PomodoroSharedState) {
+        publishedStates.append(state)
+    }
+
+    func publish(preferences: PomodoroPreferencesSnapshot) {
+        publishedPreferences.append(preferences)
+    }
+
+    func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) async -> Bool {
+        handleRemoteNotificationCalls += 1
+        return handleRemoteNotificationResult
+    }
+
+    func triggerState(_ state: PomodoroSharedState) {
+        onStateChange?(state)
+    }
+
+    func triggerPreferences(_ snapshot: PomodoroPreferencesSnapshot) {
+        onPreferencesChange?(snapshot)
+    }
 }

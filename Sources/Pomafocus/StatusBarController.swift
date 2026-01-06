@@ -11,6 +11,7 @@ final class StatusBarController {
     private let settings = PomodoroSettings()
     private let hotkeyManager = HotkeyManager()
     private let syncManager = PomodoroSyncManager.shared
+    private let blocker = PomodoroBlocker.shared
     private lazy var preferencesWindowController = PreferencesWindowController(settings: settings) { [weak self] snapshot in
         self?.apply(snapshot: snapshot, persist: true)
     }
@@ -154,6 +155,7 @@ final class StatusBarController {
         activeDuration = durationSeconds
         currentSessionStart = startDate
         timer.start(duration: TimeInterval(durationSeconds), startDate: startDate)
+        blocker.beginBlocking()
         if shouldSync {
             syncManager.publishState(duration: durationSeconds, startedAt: startDate, isRunning: true)
         }
@@ -161,6 +163,7 @@ final class StatusBarController {
 
     private func stopSession(shouldSync: Bool) {
         timer.stop()
+        blocker.endBlocking()
         currentSessionStart = nil
         if shouldSync {
             let duration = activeDuration == 0 ? currentSnapshot.minutes * 60 : activeDuration

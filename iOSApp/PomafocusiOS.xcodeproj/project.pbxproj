@@ -20,9 +20,9 @@
 		41DF21E8709B4D63958CDB9F /* PomodoroTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroTimer.swift; sourceTree = "<group>"; };
 		49ED3A160B3E493EA6AEB1AB /* PomodoroSharedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroSharedModels.swift; sourceTree = "<group>"; };
 		548A00E1DBB94E16ADDC66CD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		6AD68413344F4F6BB02ED37F /* PomafocusiOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PomafocusiOS.entitlements; sourceTree = "<group>"; };
 		59D30DFD76784233835137A1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		629FCFBE28A44DE29337BA17 /* PomafocusiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PomafocusiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6AD68413344F4F6BB02ED37F /* PomafocusiOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PomafocusiOS.entitlements; sourceTree = "<group>"; };
 		847FF638E9B94262B94B573E /* PomodoroSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomodoroSyncManager.swift; sourceTree = "<group>"; };
 		B95DAE4F856D463099577503 /* PomafocusiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PomafocusiOSApp.swift; sourceTree = "<group>"; };
 		C861E288419349D59C7E46E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -112,6 +112,14 @@
 				TargetAttributes = {
 					DF83737738804F7896F28A4F = {
 						CreatedOnToolsVersion = 15.3.0;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -165,9 +173,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PomafocusiOS/PomafocusiOS.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P2JY2TP8RZ;
+				DEVELOPMENT_TEAM = L4KYCD4RPZ;
 				INFOPLIST_FILE = PomafocusiOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -175,7 +182,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.staskus.pomafocus.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = com.povilasstaskus.pomafocus.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.10;
@@ -188,9 +195,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PomafocusiOS/PomafocusiOS.entitlements;
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = P2JY2TP8RZ;
+				DEVELOPMENT_TEAM = L4KYCD4RPZ;
 				INFOPLIST_FILE = PomafocusiOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -198,7 +204,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.staskus.pomafocus.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = com.povilasstaskus.pomafocus.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.10;

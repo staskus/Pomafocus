@@ -1,0 +1,4 @@
+name: PomafocusWorkspaceGenerator
+options:
+  postGenCommand: ../Scripts/generate_workspace.sh
+targets: {}

@@ -47,7 +47,7 @@ Generate both projects plus a shared workspace with:
 open apps/Pomafocus.xcworkspace
 ```
 
-Opening the workspace lets you flip between the macOS and iOS schemes without juggling separate windows.
+Opening the workspace lets you flip between the macOS and iOS schemes without juggling separate windows. If you prefer raw XcodeGen commands, simply run `cd apps && xcodegen generate` to regenerate both projects and the workspace in one step.
 
 ### iCloud Sync Setup
 

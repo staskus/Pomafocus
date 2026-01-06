@@ -1,4 +1,5 @@
 import AppKit
+import PomafocusKit
 
 @MainActor
 final class StatusBarController {
@@ -74,12 +75,16 @@ final class StatusBarController {
         timer.onStateChange = { [weak self] isRunning in
             guard let self else { return }
             toggleItem.title = isRunning ? "Stop Pomodoro" : "Start Pomodoro"
+            if isRunning {
+                self.playStartSound()
+            }
             if !isRunning {
                 updateStatusTitle()
             }
         }
 
         timer.onCompletion = { [weak self] in
+            self?.playCompletionSound()
             self?.updateStatusTitle()
         }
     }
@@ -114,5 +119,13 @@ final class StatusBarController {
         let minutes = seconds / 60
         let seconds = seconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func playStartSound() {
+        NSSound(named: NSSound.Name("Pop"))?.play()
+    }
+
+    private func playCompletionSound() {
+        NSSound(named: NSSound.Name("Glass"))?.play()
     }
 }

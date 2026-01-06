@@ -6,15 +6,32 @@ import PackageDescription
 let package = Package(
     name: "Pomafocus",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v13),
+        .iOS(.v16)
+    ],
+    products: [
+        .library(
+            name: "PomafocusKit",
+            targets: ["PomafocusKit"]
+        ),
+        .executable(
+            name: "Pomafocus",
+            targets: ["Pomafocus"]
+        )
     ],
     targets: [
+        .target(
+            name: "PomafocusKit"
+        ),
         .executableTarget(
             name: "Pomafocus",
+            dependencies: [
+                "PomafocusKit"
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("Carbon")
             ]
-        ),
+        )
     ]
 )

@@ -2,7 +2,7 @@ name: PomafocusMac
 options:
   bundleIdPrefix: com.staskus.pomafocus
   deploymentTarget:
-    macOS: "13.0"
+    iOS: "17.0"
 
 packages:
   PomafocusRoot:
@@ -18,11 +18,20 @@ schemes:
 targets:
   PomafocusMac:
     type: application
-    platform: macOS
+    platform: iOS
     sources:
-      - path: ../../Sources/Pomafocus
+      - path: Sources
+      - path: ../shared/Sources
     resources:
-      - path: ../../Resources/AppIcon.icns
+      - path: Sources/Assets.xcassets
+    capabilities:
+      push: true
+      iCloud:
+        containers:
+          - iCloud.com.staskus.pomafocus
+        services:
+          - CloudKit
+          - CloudDocuments
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit
@@ -33,7 +42,19 @@ targets:
         DEVELOPMENT_TEAM: L4KYCD4RPZ
         PRODUCT_BUNDLE_IDENTIFIER: com.staskus.pomafocus.mac
         SWIFT_VERSION: "5.10"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        SUPPORTS_MACCATALYST: YES
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        INFOPLIST_FILE: Info.plist
+        INFOPLIST_KEY_PomafocusCloudKitContainer: iCloud.com.staskus.pomafocus
+        INFOPLIST_KEY_PomafocusCloudKitEnabled: YES
         OTHER_LDFLAGS:
           - "-framework"
+          - AppKit
+          - "-framework"
           - Carbon
-        INFOPLIST_FILE: Info.plist
+      configurations:
+        Debug:
+          INFOPLIST_KEY_PomafocusCloudKitEnabled: NO
+        Release:
+          INFOPLIST_KEY_PomafocusCloudKitEnabled: YES

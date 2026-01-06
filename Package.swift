@@ -18,6 +18,9 @@ let package = Package(
     targets: [
         .target(
             name: "PomafocusKit",
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"])
+            ],
             linkerSettings: [
                 .linkedFramework("CloudKit"),
                 .linkedFramework("FamilyControls", .when(platforms: [.iOS])),
@@ -30,6 +33,7 @@ let package = Package(
                 "PomafocusKit"
             ],
             swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"]),
                 .enableExperimentalFeature("SwiftTesting")
             ]
         )

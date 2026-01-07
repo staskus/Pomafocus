@@ -14,11 +14,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if EntitlementChecker.hasPushEntitlement {
-            NSApplication.shared.registerForRemoteNotifications()
-        } else {
-            NSLog("Skipping remote notifications registration; APS entitlement missing.")
-        }
+        // Always attempt registration; didFailToRegisterForRemoteNotificationsWithError
+        // handles failures gracefully. CloudKit sync falls back to KVS if push unavailable.
+        NSApplication.shared.registerForRemoteNotifications()
         statusBarController = StatusBarController()
     }
 

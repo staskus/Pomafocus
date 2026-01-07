@@ -3,31 +3,29 @@ import ActivityKit
 import Foundation
 import OSLog
 import PomafocusKit
-import UserNotifications
 
 @MainActor
 final class PomodoroLiveActivityManager {
     private var activity: Activity<PomodoroActivityAttributes>?
     private let logger = Logger(subsystem: "com.staskus.pomafocus", category: "LiveActivity")
-    private var hasRequestedNotificationPermission = false
 
     func bind(to session: PomodoroSessionController) {
         Task { @MainActor [weak self] in
-            await self?.performUpdate(for: session, isRemoteUpdate: false)
+            await self?.performUpdate(for: session)
         }
     }
 
     func startOrUpdate(from session: PomodoroSessionController) {
         Task { @MainActor [weak self] in
-            await self?.performUpdate(for: session, isRemoteUpdate: false)
+            await self?.performUpdate(for: session)
         }
     }
 
     func startOrUpdateImmediately(from session: PomodoroSessionController) async {
-        await performUpdate(for: session, isRemoteUpdate: true)
+        await performUpdate(for: session)
     }
 
-    private func performUpdate(for session: PomodoroSessionController, isRemoteUpdate: Bool) async {
+    private func performUpdate(for session: PomodoroSessionController) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         let remaining = Int(session.remaining)
         let duration = session.currentDurationSeconds
@@ -52,43 +50,11 @@ final class PomodoroLiveActivityManager {
                     contentState: contentState,
                     pushType: nil
                 )
-            } catch ActivityAuthorizationError.visibility {
-                logger.info("Cannot start Live Activity from background, sending local notification")
-                if isRemoteUpdate {
-                    await sendBackgroundSessionNotification(remainingMinutes: remaining / 60)
-                }
             } catch {
                 self.logger.error("Failed to start live activity: \(String(describing: error))")
             }
         } else {
             await self.end()
-        }
-    }
-
-    private func sendBackgroundSessionNotification(remainingMinutes: Int) async {
-        let center = UNUserNotificationCenter.current()
-
-        if !hasRequestedNotificationPermission {
-            hasRequestedNotificationPermission = true
-            try? await center.requestAuthorization(options: [.alert, .sound])
-        }
-
-        let content = UNMutableNotificationContent()
-        content.title = "Focus Session Active"
-        content.body = "A \(remainingMinutes)-minute focus session started. Tap to track progress."
-        content.sound = .default
-        content.interruptionLevel = .timeSensitive
-
-        let request = UNNotificationRequest(
-            identifier: "com.staskus.pomafocus.backgroundSession",
-            content: content,
-            trigger: nil
-        )
-
-        do {
-            try await center.add(request)
-        } catch {
-            logger.error("Failed to send background session notification: \(error)")
         }
     }
 

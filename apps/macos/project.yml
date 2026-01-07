@@ -49,8 +49,3 @@ targets:
         OTHER_LDFLAGS:
           - "-framework"
           - Carbon
-      configurations:
-        Debug:
-          INFOPLIST_KEY_PomafocusCloudKitEnabled: NO
-        Release:
-          INFOPLIST_KEY_PomafocusCloudKitEnabled: YES

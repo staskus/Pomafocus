@@ -25,6 +25,9 @@ targets:
       - path: ../../Resources
     capabilities:
       push: true
+      appSandbox:
+        network:
+          client: true
       iCloud:
         containers:
           - iCloud.com.staskus.pomafocus

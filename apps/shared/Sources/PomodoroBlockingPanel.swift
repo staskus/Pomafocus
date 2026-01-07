@@ -5,9 +5,11 @@ import PomafocusKit
 struct PlatformBlockingPanel: View {
     @StateObject private var blocker: PomodoroBlocker
     @State private var showingScreenTime = false
+    private let isDisabled: Bool
 
-    init(blocker: PomodoroBlocker? = nil) {
+    init(blocker: PomodoroBlocker? = nil, isDisabled: Bool = false) {
         _blocker = StateObject(wrappedValue: blocker ?? PomodoroBlocker.shared)
+        self.isDisabled = isDisabled
     }
 
     var body: some View {
@@ -29,10 +31,13 @@ struct PlatformBlockingPanel: View {
                     .background(Color.white.opacity(0.15))
                     .cornerRadius(12)
             }
+            .disabled(isDisabled)
         }
         .sheet(isPresented: $showingScreenTime) {
             ScreenTimeSettingsView()
         }
+        .opacity(isDisabled ? 0.5 : 1)
+        .allowsHitTesting(!isDisabled)
     }
 
     private var blockingSummary: String {

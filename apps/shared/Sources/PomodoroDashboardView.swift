@@ -73,15 +73,17 @@ public struct PomodoroDashboardView: View {
                     step: 1
                 )
                 .tint(.white)
-                .disabled(!session.canAdjustMinutes)
+                .disabled(settingsLocked)
             }
 
-            PlatformBlockingPanel()
+            PlatformBlockingPanel(isDisabled: settingsLocked)
             Toggle(isOn: deepBreathBinding) {
                 Label("Deep breath before stopping", systemImage: "lungs.fill")
                     .foregroundColor(.white.opacity(0.85))
             }
             .toggleStyle(.switch)
+            .disabled(settingsLocked)
+            .opacity(settingsLocked ? 0.5 : 1)
         }
     }
 
@@ -181,5 +183,9 @@ public struct PomodoroDashboardView: View {
             get: { session.deepBreathEnabled },
             set: { session.setDeepBreathEnabled($0) }
         )
+    }
+
+    private var settingsLocked: Bool {
+        session.isRunning
     }
 }

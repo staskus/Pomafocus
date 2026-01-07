@@ -15,3 +15,16 @@
 ## Signing & Capabilities
 - If you ever need the Apple Development team ID, run `security find-identity -p codesigning -v` and use the `Apple Development` identity (current default: `L4KYCD4RPZ`). That team ID must line up with the bundle identifiers declared in `apps/ios/project.yml` and the macOS entitlements in `Resources/Info.plist`.
 - iCloud + push entitlements are already included for both apps; when creating new targets or sample projects, copy the existing entitlement settings (Key-Value sync relies on `com.apple.developer.ubiquity-kvstore-identifier` matching the bundle ID).
+
+## After Each Code Change
+
+Follow this workflow after making any code changes:
+
+1. **Run tests:** `swift test`
+2. **Regenerate Xcode projects:** `cd apps && xcodegen generate`
+3. **Verify success:** Both steps must pass without errors
+4. **Commit & push:** Only if tests pass and xcodegen succeeds
+
+```sh
+swift test && cd apps && xcodegen generate && cd .. && git add -A && git commit -m "Your message" && git push
+```

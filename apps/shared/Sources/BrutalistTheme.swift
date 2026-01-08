@@ -8,46 +8,70 @@ public enum BrutalistColors {
     // MARK: - Primary Colors
 
     /// Pure black - primary dark background
-    public static let black = Color(light: .init(white: 0.08), dark: .init(white: 0.02))
+    public static let black = Color(
+        light: Color(white: 0.08),
+        dark: Color(white: 0.02)
+    )
 
     /// Dark grey - elevated surfaces
-    public static let surface = Color(light: .init(white: 0.95), dark: .init(white: 0.12))
+    public static let surface = Color(
+        light: Color(white: 0.95),
+        dark: Color(white: 0.12)
+    )
 
     /// Medium grey - secondary surfaces
-    public static let surfaceSecondary = Color(light: .init(white: 0.88), dark: .init(white: 0.18))
+    public static let surfaceSecondary = Color(
+        light: Color(white: 0.88),
+        dark: Color(white: 0.18)
+    )
 
     /// Light grey - borders and dividers
-    public static let border = Color(light: .init(white: 0.75), dark: .init(white: 0.25))
+    public static let border = Color(
+        light: Color(white: 0.75),
+        dark: Color(white: 0.25)
+    )
 
     // MARK: - Accent Colors
 
     /// Tomato red - primary accent from app icon
     public static let red = Color(
-        light: .init(red: 0.85, green: 0.18, blue: 0.15),
-        dark: .init(red: 0.92, green: 0.25, blue: 0.20)
+        light: Color(red: 0.85, green: 0.18, blue: 0.15),
+        dark: Color(red: 0.92, green: 0.25, blue: 0.20)
     )
 
     /// Warning/timer yellow - from app icon dial
     public static let yellow = Color(
-        light: .init(red: 0.95, green: 0.75, blue: 0.10),
-        dark: .init(red: 1.0, green: 0.82, blue: 0.20)
+        light: Color(red: 0.95, green: 0.75, blue: 0.10),
+        dark: Color(red: 1.0, green: 0.82, blue: 0.20)
     )
 
     // MARK: - Text Colors
 
     /// Primary text
-    public static let textPrimary = Color(light: .init(white: 0.08), dark: .init(white: 0.98))
+    public static let textPrimary = Color(
+        light: Color(white: 0.08),
+        dark: Color(white: 0.98)
+    )
 
     /// Secondary text
-    public static let textSecondary = Color(light: .init(white: 0.35), dark: .init(white: 0.65))
+    public static let textSecondary = Color(
+        light: Color(white: 0.35),
+        dark: Color(white: 0.65)
+    )
 
     /// Inverted text (for colored backgrounds)
-    public static let textInverted = Color(light: .init(white: 0.98), dark: .init(white: 0.02))
+    public static let textInverted = Color(
+        light: Color(white: 0.98),
+        dark: Color(white: 0.02)
+    )
 
     // MARK: - Background
 
     /// Main app background
-    public static let background = Color(light: .init(white: 1.0), dark: .init(white: 0.06))
+    public static let background = Color(
+        light: Color(white: 1.0),
+        dark: Color(white: 0.06)
+    )
 }
 
 // MARK: - Typography
@@ -106,10 +130,21 @@ public enum BrutalistRadius {
 // MARK: - Color Extension
 
 extension Color {
-    init(light: Color.Resolved, dark: Color.Resolved) {
-        self.init { traits in
-            traits.colorScheme == .dark ? Color(dark) : Color(light)
-        }
+    /// Creates a dynamic color that adapts to light and dark mode
+    init(light: Color, dark: Color) {
+        #if canImport(UIKit)
+        self.init(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(dark)
+                : UIColor(light)
+        })
+        #else
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(dark)
+                : NSColor(light)
+        })
+        #endif
     }
 }
 

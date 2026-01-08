@@ -59,11 +59,8 @@ public enum BrutalistColors {
         dark: Color(white: 0.65)
     )
 
-    /// Inverted text (for colored backgrounds)
-    public static let textInverted = Color(
-        light: Color(white: 0.98),
-        dark: Color(white: 0.02)
-    )
+    /// Text on colored/dark backgrounds - always light
+    public static let textOnColor = Color.white
 
     // MARK: - Background
 
@@ -174,7 +171,7 @@ public struct BrutalistPrimaryButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(BrutalistTypography.headline)
-            .foregroundStyle(BrutalistColors.textInverted)
+            .foregroundStyle(BrutalistColors.textOnColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, BrutalistSpacing.md)
             .background(isDestructive ? BrutalistColors.red : BrutalistColors.black)

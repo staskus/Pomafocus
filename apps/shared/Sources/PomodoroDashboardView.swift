@@ -53,7 +53,7 @@ public struct PomodoroDashboardView: View {
     private var statusBadge: some View {
         Text("ACTIVE")
             .font(BrutalistTypography.mono)
-            .foregroundStyle(BrutalistColors.textInverted)
+            .foregroundStyle(BrutalistColors.textOnColor)
             .padding(.horizontal, BrutalistSpacing.sm)
             .padding(.vertical, BrutalistSpacing.xs)
             .background(BrutalistColors.red)
@@ -127,7 +127,7 @@ public struct PomodoroDashboardView: View {
             VStack(spacing: BrutalistSpacing.xs) {
                 Text(buttonTitle)
                     .font(BrutalistTypography.headline)
-                    .foregroundStyle(BrutalistColors.textInverted)
+                    .foregroundStyle(BrutalistColors.textOnColor)
 
                 if let progress = deepBreathProgress {
                     GeometryReader { geo in
@@ -136,7 +136,7 @@ public struct PomodoroDashboardView: View {
                             .frame(width: geo.size.width * progress)
                     }
                     .frame(height: 4)
-                    .background(BrutalistColors.textInverted.opacity(0.3))
+                    .background(BrutalistColors.textOnColor.opacity(0.3))
                     .clipShape(RoundedRectangle(cornerRadius: 2))
                 }
             }

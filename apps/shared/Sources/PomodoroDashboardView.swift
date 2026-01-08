@@ -3,89 +3,224 @@ import PomafocusKit
 
 public struct PomodoroDashboardView: View {
     @ObservedObject private var session: PomodoroSessionController
+    @Environment(\.colorScheme) private var colorScheme
 
-    public init(
-        session: PomodoroSessionController
-    ) {
+    public init(session: PomodoroSessionController) {
         self.session = session
     }
 
     public var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color("AccentDeep"), Color("AccentBright")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            BrutalistColors.background
+                .ignoresSafeArea()
 
-            VStack(spacing: 32) {
-                header
-                timerCard
-                controls
-                Spacer()
+            ScrollView {
+                VStack(spacing: BrutalistSpacing.lg) {
+                    header
+                    timerSection
+                    controlsSection
+                }
+                .padding(BrutalistSpacing.md)
             }
-            .padding()
         }
     }
+
+    // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Pomafocus")
-                .font(.largeTitle.bold())
-                .foregroundColor(.white)
-            Text(session.displayStateText)
-                .font(.headline)
-                .foregroundColor(.white.opacity(0.8))
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: BrutalistSpacing.xs) {
+                Text("POMAFOCUS")
+                    .font(BrutalistTypography.title(28))
+                    .foregroundStyle(BrutalistColors.textPrimary)
+                    .tracking(2)
+
+                Text(session.displayStateText.uppercased())
+                    .font(BrutalistTypography.caption)
+                    .foregroundStyle(session.isRunning ? BrutalistColors.red : BrutalistColors.textSecondary)
+                    .tracking(1)
+            }
+
+            Spacer()
+
+            if session.isRunning {
+                statusBadge
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, BrutalistSpacing.sm)
     }
 
-    private var timerCard: some View {
-        VStack(spacing: 20) {
-            timerRing
-            stopButton
-        }
-        .padding()
-        .background(Color.white.opacity(0.08))
-        .cornerRadius(28)
+    private var statusBadge: some View {
+        Text("ACTIVE")
+            .font(BrutalistTypography.mono)
+            .foregroundStyle(BrutalistColors.textInverted)
+            .padding(.horizontal, BrutalistSpacing.sm)
+            .padding(.vertical, BrutalistSpacing.xs)
+            .background(BrutalistColors.red)
+            .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
     }
 
-    private var controls: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Session length")
-                        .foregroundColor(.white.opacity(0.8))
-                    Spacer()
-                    Text("\(session.minutes) min")
-                        .foregroundColor(.white)
-                        .font(.title3.bold())
-                        .monospacedDigit()
+    // MARK: - Timer Section
+
+    private var timerSection: some View {
+        VStack(spacing: BrutalistSpacing.lg) {
+            timerDisplay
+            actionButton
+        }
+        .padding(BrutalistSpacing.lg)
+        .background(BrutalistColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: BrutalistRadius.md)
+                .stroke(BrutalistColors.border, lineWidth: 1)
+        )
+    }
+
+    private var timerDisplay: some View {
+        VStack(spacing: BrutalistSpacing.md) {
+            ZStack {
+                // Background track
+                Circle()
+                    .stroke(BrutalistColors.border, lineWidth: 8)
+
+                // Progress arc
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        session.isRunning ? BrutalistColors.red : BrutalistColors.yellow,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .butt)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.3), value: progress)
+
+                // Timer text
+                VStack(spacing: BrutalistSpacing.xs) {
+                    Text(session.remainingDisplay)
+                        .font(BrutalistTypography.timer(52))
+                        .foregroundStyle(BrutalistColors.textPrimary)
+                        .contentTransition(.numericText())
+
+                    Text(session.isRunning ? "STAY FOCUSED" : "READY")
+                        .font(BrutalistTypography.mono)
+                        .foregroundStyle(BrutalistColors.textSecondary)
+                        .tracking(2)
                 }
-
-                Slider(
-                    value: Binding(
-                        get: { Double(session.minutes) },
-                        set: { session.setMinutes(Int($0.rounded())) }
-                    ),
-                    in: 10...90,
-                    step: 1
-                )
-                .tint(.white)
-                .disabled(settingsLocked)
             }
+            .frame(width: 220, height: 220)
 
-            PlatformBlockingPanel(isDisabled: settingsLocked)
-            Toggle(isOn: deepBreathBinding) {
-                Label("Deep breath before stopping", systemImage: "lungs.fill")
-                    .foregroundColor(.white.opacity(0.85))
+            // Minutes indicator
+            HStack(spacing: BrutalistSpacing.xs) {
+                Text("\(session.minutes)")
+                    .font(BrutalistTypography.headline)
+                    .foregroundStyle(BrutalistColors.yellow)
+                    .monospacedDigit()
+                Text("MIN SESSION")
+                    .font(BrutalistTypography.caption)
+                    .foregroundStyle(BrutalistColors.textSecondary)
+                    .tracking(1)
             }
-            .toggleStyle(.switch)
-            .disabled(settingsLocked)
-            .opacity(settingsLocked ? 0.5 : 1)
         }
     }
+
+    private var actionButton: some View {
+        Button(action: session.toggleTimer) {
+            VStack(spacing: BrutalistSpacing.xs) {
+                Text(buttonTitle)
+                    .font(BrutalistTypography.headline)
+                    .foregroundStyle(BrutalistColors.textInverted)
+
+                if let progress = deepBreathProgress {
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(BrutalistColors.yellow)
+                            .frame(width: geo.size.width * progress)
+                    }
+                    .frame(height: 4)
+                    .background(BrutalistColors.textInverted.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, BrutalistSpacing.md)
+            .padding(.horizontal, BrutalistSpacing.lg)
+            .background(session.isRunning ? BrutalistColors.red : BrutalistColors.black)
+            .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+        }
+        .disabled(buttonDisabled)
+        .opacity(buttonDisabled ? 0.6 : 1)
+    }
+
+    // MARK: - Controls Section
+
+    private var controlsSection: some View {
+        VStack(spacing: BrutalistSpacing.md) {
+            sessionLengthControl
+            Divider()
+                .background(BrutalistColors.border)
+            PlatformBlockingPanel(isDisabled: settingsLocked)
+            Divider()
+                .background(BrutalistColors.border)
+            deepBreathToggle
+        }
+        .padding(BrutalistSpacing.md)
+        .background(BrutalistColors.surface)
+        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: BrutalistRadius.md)
+                .stroke(BrutalistColors.border, lineWidth: 1)
+        )
+        .opacity(settingsLocked ? 0.5 : 1)
+    }
+
+    private var sessionLengthControl: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            HStack {
+                Text("SESSION LENGTH")
+                    .font(BrutalistTypography.caption)
+                    .foregroundStyle(BrutalistColors.textSecondary)
+                    .tracking(1)
+                Spacer()
+                Text("\(session.minutes) MIN")
+                    .font(BrutalistTypography.headline)
+                    .foregroundStyle(BrutalistColors.textPrimary)
+                    .monospacedDigit()
+            }
+
+            Slider(
+                value: Binding(
+                    get: { Double(session.minutes) },
+                    set: { session.setMinutes(Int($0.rounded())) }
+                ),
+                in: 10...90,
+                step: 1
+            )
+            .tint(BrutalistColors.red)
+            .disabled(settingsLocked)
+        }
+    }
+
+    private var deepBreathToggle: some View {
+        Toggle(isOn: deepBreathBinding) {
+            HStack(spacing: BrutalistSpacing.sm) {
+                Image(systemName: "lungs.fill")
+                    .foregroundStyle(BrutalistColors.textSecondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("DEEP BREATH")
+                        .font(BrutalistTypography.caption)
+                        .foregroundStyle(BrutalistColors.textSecondary)
+                        .tracking(1)
+                    Text("Pause before stopping")
+                        .font(BrutalistTypography.body)
+                        .foregroundStyle(BrutalistColors.textPrimary)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(BrutalistColors.red)
+        .disabled(settingsLocked)
+    }
+
+    // MARK: - Computed Properties
 
     private var progress: CGFloat {
         let total = Double(session.minutes * 60)
@@ -93,76 +228,22 @@ public struct PomodoroDashboardView: View {
         return CGFloat(1 - (session.remaining / total))
     }
 
-    private var timerRing: some View {
-        let ringWidth: CGFloat = 14
-        return ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.2), lineWidth: ringWidth)
-                .frame(width: 220, height: 220)
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    AngularGradient(
-                        gradient: Gradient(colors: [.white, Color("AccentGlow")]),
-                        center: .center
-                    ),
-                    style: StrokeStyle(lineWidth: ringWidth, lineCap: .round, lineJoin: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .frame(width: 220, height: 220)
-                .animation(.easeInOut(duration: 0.4), value: progress)
-
-            VStack(spacing: 4) {
-                Text(session.remainingDisplay)
-                    .font(.system(size: 48, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white)
-                    .monospacedDigit()
-                Text(session.isRunning ? "Stay in flow" : "Ready to focus")
-                    .foregroundColor(.white.opacity(0.8))
-                    .font(.subheadline)
-            }
-        }
-    }
-
-    private var stopButton: some View {
-        Button(action: session.toggleTimer) {
-            VStack(spacing: 6) {
-                Text(stopButtonTitle)
-                    .font(.title3.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(Color("AccentDeep"))
-                if let progress = deepBreathProgress {
-                    ProgressView(value: progress)
-                        .progressViewStyle(.linear)
-                        .tint(Color("AccentGlow"))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.white)
-            .cornerRadius(16)
-        }
-        .disabled(stopButtonDisabled)
-    }
-
-    private var stopButtonTitle: String {
+    private var buttonTitle: String {
         if session.isRunning {
             if session.deepBreathEnabled {
                 if session.deepBreathReady {
-                    return "Confirm Stop"
+                    return "CONFIRM STOP"
                 }
                 if let remaining = session.deepBreathRemaining {
-                    return "Deep breath \(PomodoroSessionController.format(seconds: Int(remaining)))"
+                    return "BREATHE \(PomodoroSessionController.format(seconds: Int(remaining)))"
                 }
             }
-            return "Stop Session"
-        } else {
-            return "Start Focus"
+            return "STOP SESSION"
         }
+        return "START FOCUS"
     }
 
-    private var stopButtonDisabled: Bool {
+    private var buttonDisabled: Bool {
         session.isRunning && session.deepBreathEnabled && session.deepBreathRemaining != nil && !session.deepBreathReady
     }
 

@@ -9,17 +9,25 @@ struct PomafocusActivityView: View {
     var body: some View {
         ZStack {
             ContainerRelativeShape()
-                .fill(
-                    LinearGradient(
-                        colors: [Color("AccentDeep"), Color("AccentBright")],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color("AccentDeep"))
+
             VStack(alignment: .leading, spacing: 8) {
-                Text("Pomafocus")
-                    .font(.headline)
-                    .foregroundColor(.white.opacity(0.9))
+                HStack {
+                    Text("POMAFOCUS")
+                        .font(.system(size: 13, weight: .black))
+                        .tracking(1.5)
+                        .foregroundColor(.white.opacity(0.8))
+
+                    Spacer()
+
+                    Text("ACTIVE")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color("AccentBright"))
+                }
+
                 timerLabel
                 timerProgress
             }
@@ -31,38 +39,37 @@ struct PomafocusActivityView: View {
     }
 
     private var timerLabel: some View {
-        if let interval = timerInterval {
-            return AnyView(
+        Group {
+            if let interval = timerInterval {
                 Text(timerInterval: interval, countsDown: true)
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+                    .font(.system(size: 44, weight: .heavy, design: .monospaced))
                     .foregroundColor(.white)
-            )
-        } else {
-            return AnyView(
+            } else {
                 Text(formattedRemaining)
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+                    .font(.system(size: 44, weight: .heavy, design: .monospaced))
                     .foregroundColor(.white)
-            )
+            }
         }
     }
 
     private var timerProgress: some View {
-        if let interval = timerInterval {
-            return AnyView(
-                ProgressView(timerInterval: interval)
-                    .progressViewStyle(.linear)
-                    .tint(Color("AccentGlow"))
-            )
-        } else {
-            return AnyView(
-                ProgressView(value: Double(context.state.durationSeconds - context.state.remainingSeconds),
-                             total: Double(max(context.state.durationSeconds, 1)))
-                    .progressViewStyle(.linear)
-                    .tint(Color("AccentGlow"))
-            )
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.2))
+
+                Rectangle()
+                    .fill(Color("AccentGlow"))
+                    .frame(width: geo.size.width * progressValue)
+            }
         }
+        .frame(height: 6)
+    }
+
+    private var progressValue: CGFloat {
+        let total = max(context.state.durationSeconds, 1)
+        let elapsed = total - context.state.remainingSeconds
+        return CGFloat(elapsed) / CGFloat(total)
     }
 
     private var timerInterval: ClosedRange<Date>? {
@@ -93,15 +100,19 @@ struct PomafocusActivities: Widget {
             } compactLeading: {
                 if let interval = context.timerInterval {
                     Text(timerInterval: interval, countsDown: true)
-                        .font(.body.monospacedDigit())
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(Color("AccentGlow"))
                 } else {
                     Text(shortTime(context.state.remainingSeconds))
-                        .font(.body.monospacedDigit())
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(Color("AccentGlow"))
                 }
             } compactTrailing: {
                 Image(systemName: "timer")
+                    .foregroundColor(Color("AccentBright"))
             } minimal: {
                 Image(systemName: "timer")
+                    .foregroundColor(Color("AccentBright"))
             }
         }
     }

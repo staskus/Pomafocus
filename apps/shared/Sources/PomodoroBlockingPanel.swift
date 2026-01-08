@@ -13,34 +13,51 @@ struct PlatformBlockingPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Screen Time blocking", systemImage: "shield.lefthalf.fill")
-                .foregroundColor(.white.opacity(0.9))
-                .font(.headline)
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            HStack(spacing: BrutalistSpacing.sm) {
+                Image(systemName: "shield.lefthalf.filled")
+                    .foregroundStyle(BrutalistColors.yellow)
+                    .font(.system(size: 16, weight: .bold))
+
+                Text("SCREEN TIME")
+                    .font(BrutalistTypography.caption)
+                    .foregroundStyle(BrutalistColors.textSecondary)
+                    .tracking(1)
+            }
+
             Text(blockingSummary)
-                .font(.footnote.monospaced())
-                .foregroundColor(.white.opacity(0.8))
+                .font(BrutalistTypography.mono)
+                .foregroundStyle(blocker.hasSelection ? BrutalistColors.textPrimary : BrutalistColors.textSecondary)
 
             Button {
                 showingScreenTime = true
             } label: {
-                Text("Choose apps & websites")
-                    .font(.subheadline.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.white.opacity(0.15))
-                    .cornerRadius(12)
+                HStack {
+                    Text("CHOOSE APPS")
+                        .font(BrutalistTypography.caption)
+                        .tracking(1)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(BrutalistColors.textPrimary)
+                .padding(BrutalistSpacing.sm)
+                .background(BrutalistColors.surfaceSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+                .overlay(
+                    RoundedRectangle(cornerRadius: BrutalistRadius.sm)
+                        .stroke(BrutalistColors.border, lineWidth: 1)
+                )
             }
             .disabled(isDisabled)
         }
         .sheet(isPresented: $showingScreenTime) {
             ScreenTimeSettingsView()
         }
-        .opacity(isDisabled ? 0.5 : 1)
         .allowsHitTesting(!isDisabled)
     }
 
     private var blockingSummary: String {
-        blocker.hasSelection ? blocker.selectionSummary : "No distractions selected"
+        blocker.hasSelection ? blocker.selectionSummary : "No apps selected"
     }
 }

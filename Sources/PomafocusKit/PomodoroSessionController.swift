@@ -14,7 +14,7 @@ public final class PomodoroSessionController: ObservableObject {
     @Published public private(set) var deepBreathConfirmationRemaining: TimeInterval?
 
     public var remainingDisplay: String {
-        PomodoroSessionController.format(seconds: Int(remaining))
+        PomodoroSessionController.format(seconds: Int(ceil(remaining)))
     }
 
     public var displayStateText: String {

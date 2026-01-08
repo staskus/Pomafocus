@@ -235,7 +235,7 @@ public struct PomodoroDashboardView: View {
                     return "CONFIRM STOP"
                 }
                 if let remaining = session.deepBreathRemaining {
-                    return "BREATHE \(PomodoroSessionController.format(seconds: Int(remaining)))"
+                    return "BREATHE \(PomodoroSessionController.format(seconds: Int(ceil(remaining))))"
                 }
             }
             return "STOP SESSION"

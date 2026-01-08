@@ -40,3 +40,4 @@ apps/ios/fastlane/logs/
 apps/ios/*.ipa
 apps/ios/*.dSYM.zip
 apps/ios/*.mobileprovision
+apps/ios/build/

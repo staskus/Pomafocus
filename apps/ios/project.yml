@@ -36,6 +36,7 @@ targets:
       - package: PomafocusRoot
         product: PomafocusKit
       - target: PomafocusActivities
+      - target: PomafocusShield
     settings:
       base:
         CODE_SIGN_STYLE: Automatic
@@ -64,3 +65,15 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.activities
     resources:
       - path: Sources/Assets.xcassets
+  PomafocusShield:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShieldExtension
+    settings:
+      base:
+        INFOPLIST_FILE: ShieldExtension/Info.plist
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: minimal
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.shield

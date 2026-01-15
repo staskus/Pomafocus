@@ -79,3 +79,21 @@ Only the iOS app integrates with `FamilyControls`/`ManagedSettings`. Open **Bloc
 ## Live Activities (iOS)
 
 The `PomafocusActivities` widget delivers a Lock Screen/Dynamic Island status view with the remaining time and progress bar. The main target opts into `NSSupportsLiveActivities` so ActivityKit can continue updating even when the UI is backgrounded; CloudKit pushes wake the app so the Live Activity mirrors macOS timers too.
+
+## Remote Timer Control (For Developers)
+
+Developers who fork this repo and set up their own CloudKit container can control the timer remotely from a VPS or script using CloudKit Web Services.
+
+This allows you to start/stop the timer via HTTP requests with server-to-server authentication:
+
+```bash
+./pomafocus-remote.sh start  # Start timer on your devices
+./pomafocus-remote.sh stop   # Stop timer on your devices
+```
+
+**Requirements:**
+- Your own CloudKit container (configured in project files)
+- Server-to-server key (created in CloudKit Dashboard)
+- ECDSA key pair for signing requests
+
+See [REMOTE_API.md](REMOTE_API.md) for complete setup instructions and example scripts.

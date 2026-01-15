@@ -6,7 +6,12 @@ public final class PomodoroSyncManager {
 
     public var onStateChange: ((PomodoroSharedState) -> Void)?
     public var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)?
+    public var onTimerCommand: ((TimerCommand) -> Void)?
     public let deviceIdentifier: String
+
+    public var userRecordName: String? {
+        cloudSync.userRecordName
+    }
 
     private let store: NSUbiquitousKeyValueStore?
     private let defaults: UserDefaults
@@ -15,6 +20,8 @@ public final class PomodoroSyncManager {
     private let decoder = JSONDecoder()
     private var observing = false
     @preconcurrency private var storeObserver: NSObjectProtocol?
+    private var processedCommandNonces: Set<String> = []
+    private static let commandValidityWindow: TimeInterval = 300 // 5 minutes
 
     private enum Keys {
         static let state = "pomafocus.shared.state"
@@ -199,6 +206,41 @@ public final class PomodoroSyncManager {
             self.savePreferences(snapshot)
             self.onPreferencesChange?(snapshot)
         }
+        cloudSync.onTimerCommand = { [weak self] command in
+            self?.handleTimerCommand(command)
+        }
+    }
+
+    private func handleTimerCommand(_ command: TimerCommand) {
+        // Validate timestamp is within acceptable window
+        let age = abs(command.timestamp.timeIntervalSinceNow)
+        guard age < Self.commandValidityWindow else {
+            log("Rejecting command: timestamp too old (\(Int(age))s)")
+            return
+        }
+
+        // Validate nonce hasn't been used
+        guard !processedCommandNonces.contains(command.nonce) else {
+            log("Rejecting command: duplicate nonce")
+            return
+        }
+
+        // Track nonce to prevent replay
+        processedCommandNonces.insert(command.nonce)
+
+        // Limit nonce cache size
+        if processedCommandNonces.count > 100 {
+            processedCommandNonces.removeFirst()
+        }
+
+        log("Processing timer command: \(command.action.rawValue)")
+        onTimerCommand?(command)
+    }
+
+    private func log(_ message: String) {
+        #if DEBUG
+        NSLog("[PomodoroSyncManager] %@", message)
+        #endif
     }
 }
 extension PomodoroSyncManager: PomodoroSyncManaging {}

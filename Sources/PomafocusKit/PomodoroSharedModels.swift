@@ -1,5 +1,24 @@
 import Foundation
 
+public struct TimerCommand: Codable, Equatable, Sendable {
+    public enum Action: String, Codable, Sendable {
+        case start
+        case stop
+    }
+
+    public var action: Action
+    public var targetUserRecordName: String
+    public var timestamp: Date
+    public var nonce: String
+
+    public init(action: Action, targetUserRecordName: String, timestamp: Date, nonce: String) {
+        self.action = action
+        self.targetUserRecordName = targetUserRecordName
+        self.timestamp = timestamp
+        self.nonce = nonce
+    }
+}
+
 public struct PomodoroSharedState: Codable, Equatable {
     public var duration: Int
     public var startedAt: Date?

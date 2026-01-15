@@ -131,6 +131,8 @@ private func temporaryDefaults() -> UserDefaults {
 private final class MockCloudSync: PomodoroCloudSyncing {
     var onStateChange: ((PomodoroSharedState) -> Void)?
     var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)?
+    var onTimerCommand: ((TimerCommand) -> Void)?
+    var userRecordName: String? = "_mock_user_record"
 
     private(set) var startCount = 0
     private(set) var publishedStates: [PomodoroSharedState] = []

@@ -12,9 +12,16 @@ final class PomafocusCore: ObservableObject {
         let session = PomodoroSessionController()
         self.session = session
         self.experienceCoordinator = PomodoroExperienceCoordinator(session: session)
+        wireRemoteCommands()
     }
 
     func refreshLiveActivity() async {
         await experienceCoordinator.refreshLiveActivity()
+    }
+
+    private func wireRemoteCommands() {
+        PomodoroSyncManager.shared.onTimerCommand = { [weak self] command in
+            self?.session.handleRemoteCommand(command)
+        }
     }
 }

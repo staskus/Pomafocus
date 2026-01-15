@@ -127,28 +127,9 @@ final class StatusBarController {
         syncManager.onPreferencesChange = { [weak self] snapshot in
             self?.handleSharedPreferences(snapshot, ignoreIfLocalOrigin: true)
         }
-        syncManager.onTimerCommand = { [weak self] command in
-            self?.handleRemoteCommand(command)
-        }
         syncManager.start()
         handleSharedPreferences(syncManager.currentPreferences(), ignoreIfLocalOrigin: false)
         handleSharedState(syncManager.currentState(), ignoreIfLocalOrigin: false)
-    }
-
-    private func handleRemoteCommand(_ command: TimerCommand) {
-        switch command.action {
-        case .start:
-            if !timer.isRunning {
-                let duration = currentSnapshot.minutes * 60
-                resetDeepBreath()
-                startSession(durationSeconds: duration, startDate: Date(), shouldSync: true)
-            }
-        case .stop:
-            if timer.isRunning {
-                resetDeepBreath()
-                stopSession(shouldSync: true)
-            }
-        }
     }
 
     private func handleSharedState(_ state: PomodoroSharedState, ignoreIfLocalOrigin: Bool) {

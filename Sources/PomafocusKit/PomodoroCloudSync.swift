@@ -5,8 +5,6 @@ import Foundation
 protocol PomodoroCloudSyncing: AnyObject {
     var onStateChange: ((PomodoroSharedState) -> Void)? { get set }
     var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)? { get set }
-    var onTimerCommand: ((TimerCommand) -> Void)? { get set }
-    var userRecordName: String? { get }
 
     func start()
     func publish(state: PomodoroSharedState)
@@ -47,39 +45,32 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
     private enum RecordType {
         static let state = "PomodoroState"
         static let preferences = "PomodoroPreferences"
-        static let timerCommand = "TimerCommand"
     }
 
     private enum SubscriptionID {
         static let state = "PomafocusStateSubscription"
         static let preferences = "PomafocusPreferencesSubscription"
-        static let timerCommand = "PomafocusTimerCommandSubscription"
     }
 
     private let configuration: CloudKitConfiguration
     private let container: CKContainer?
     private let database: CKDatabase?
-    private let publicDatabase: CKDatabase?
     private let stateRecordID = CKRecord.ID(recordName: RecordType.state)
     private let preferencesRecordID = CKRecord.ID(recordName: RecordType.preferences)
     private var hasStarted = false
-    private(set) var userRecordName: String?
 
     var onStateChange: ((PomodoroSharedState) -> Void)?
     var onPreferencesChange: ((PomodoroPreferencesSnapshot) -> Void)?
-    var onTimerCommand: ((TimerCommand) -> Void)?
 
-    init(configuration: CloudKitConfiguration = .fromBundle(), database: CKDatabase? = nil, publicDatabase: CKDatabase? = nil) {
+    init(configuration: CloudKitConfiguration = .fromBundle(), database: CKDatabase? = nil) {
         self.configuration = configuration
         if configuration.isEnabled, let identifier = configuration.containerIdentifier {
             let container = CKContainer(identifier: identifier)
             self.container = container
             self.database = database ?? container.privateCloudDatabase
-            self.publicDatabase = publicDatabase ?? container.publicCloudDatabase
         } else {
             self.container = nil
             self.database = nil
-            self.publicDatabase = nil
         }
     }
 
@@ -143,11 +134,6 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
                 case SubscriptionID.preferences:
                     try await fetchPreferencesRecord(database: database)
                     return true
-                case SubscriptionID.timerCommand:
-                    if let recordID = queryNotification.recordID, let publicDatabase {
-                        try await fetchAndProcessCommand(recordID: recordID, database: publicDatabase)
-                    }
-                    return true
                 default:
                     return false
                 }
@@ -158,42 +144,6 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
         }
 
         return false
-    }
-
-    private func fetchAndProcessCommand(recordID: CKRecord.ID, database: CKDatabase) async throws {
-        let record = try await fetch(recordID: recordID, database: database)
-        guard let command = decodeCommand(from: record) else {
-            log("Failed to decode timer command from record")
-            return
-        }
-
-        // Verify command is for this user
-        guard command.targetUserRecordName == userRecordName else {
-            log("Ignoring command for different user")
-            return
-        }
-
-        log("Received timer command: \(command.action.rawValue)")
-        onTimerCommand?(command)
-    }
-
-    private func decodeCommand(from record: CKRecord) -> TimerCommand? {
-        guard
-            let actionString = record["action"] as? String,
-            let action = TimerCommand.Action(rawValue: actionString),
-            let targetUser = record["targetUserRecordName"] as? String,
-            let timestamp = record["timestamp"] as? Date,
-            let nonce = record["nonce"] as? String
-        else {
-            return nil
-        }
-
-        return TimerCommand(
-            action: action,
-            targetUserRecordName: targetUser,
-            timestamp: timestamp,
-            nonce: nonce
-        )
     }
 
     private func setupSubscriptionsAndFetch() async {
@@ -215,45 +165,13 @@ final class CloudKitPomodoroSync: PomodoroCloudSyncing {
                 log("Skipping CloudKit sync; account status = \(status.rawValue)")
                 return
             }
-
-            // Fetch user record name for command targeting
-            do {
-                let userRecordID = try await container.userRecordID()
-                self.userRecordName = userRecordID.recordName
-                log("User record name: \(userRecordID.recordName)")
-            } catch {
-                log("Failed to fetch user record name: \(error)")
-            }
-
-            // Private database subscriptions
             try await ensureSubscription(recordType: RecordType.state, subscriptionID: SubscriptionID.state, database: database)
             try await ensureSubscription(recordType: RecordType.preferences, subscriptionID: SubscriptionID.preferences, database: database)
             try await fetchStateRecord(database: database)
             try await fetchPreferencesRecord(database: database)
-
-            // Public database subscription for remote commands
-            if let publicDatabase, let userRecordName {
-                try await ensureCommandSubscription(userRecordName: userRecordName, database: publicDatabase)
-            }
         } catch {
             log("Failed to set up CloudKit sync: \(error)")
         }
-    }
-
-    private func ensureCommandSubscription(userRecordName: String, database: CKDatabase) async throws {
-        let predicate = NSPredicate(format: "targetUserRecordName == %@", userRecordName)
-        let subscription = CKQuerySubscription(
-            recordType: RecordType.timerCommand,
-            predicate: predicate,
-            subscriptionID: SubscriptionID.timerCommand,
-            options: [.firesOnRecordCreation]
-        )
-        let info = CKSubscription.NotificationInfo()
-        info.shouldSendContentAvailable = true
-        subscription.notificationInfo = info
-
-        _ = try await save(subscription: subscription, database: database)
-        log("Timer command subscription set up for user: \(userRecordName)")
     }
 
     private func fetchStateRecord(database: CKDatabase? = nil) async throws {

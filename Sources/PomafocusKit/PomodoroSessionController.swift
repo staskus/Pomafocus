@@ -135,21 +135,6 @@ public final class PomodoroSessionController: ObservableObject {
         }
     }
 
-    public func handleRemoteCommand(_ command: TimerCommand) {
-        switch command.action {
-        case .start:
-            if !isRunning {
-                resetDeepBreath()
-                startSession(durationSeconds: minutes * 60, startDate: Date(), shouldSync: true)
-            }
-        case .stop:
-            if isRunning {
-                resetDeepBreath()
-                stopSession(shouldSync: true)
-            }
-        }
-    }
-
     private func bindTimer() {
         timer.onTick = { [weak self] remaining in
             guard let self else { return }

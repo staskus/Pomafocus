@@ -2,6 +2,9 @@ import Foundation
 #if canImport(Combine)
 import Combine
 #endif
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 @MainActor
 public final class PomodoroSessionController: ObservableObject {
@@ -49,6 +52,7 @@ public final class PomodoroSessionController: ObservableObject {
     private let deepBreathConfirmTimer: PomodoroTimer
     private let syncManager: PomodoroSyncManaging
     private let blocker: PomodoroBlocking
+    private let widgetStateManager: WidgetStateManager
     private var activeDuration: Int = 0
     public static let deepBreathDuration: TimeInterval = 30
     public static let deepBreathConfirmationWindow: TimeInterval = 60
@@ -60,13 +64,15 @@ public final class PomodoroSessionController: ObservableObject {
         deepBreathConfirmTimer: PomodoroTimer? = nil,
         deepBreathClock: @escaping () -> Date = Date.init,
         syncManager: PomodoroSyncManaging? = nil,
-        blocker: PomodoroBlocking? = nil
+        blocker: PomodoroBlocking? = nil,
+        widgetStateManager: WidgetStateManager? = nil
     ) {
         self.timer = timer ?? PomodoroTimer()
         self.deepBreathTimer = deepBreathTimer ?? PomodoroTimer()
         self.deepBreathConfirmTimer = deepBreathConfirmTimer ?? PomodoroTimer()
         self.syncManager = syncManager ?? PomodoroSyncManager.shared
         self.blocker = blocker ?? PomodoroBlocker.shared
+        self.widgetStateManager = widgetStateManager ?? WidgetStateManager.shared
         self.deepBreathClock = deepBreathClock
 
         self.syncManager.start()
@@ -86,6 +92,8 @@ public final class PomodoroSessionController: ObservableObject {
         } else {
             updateDisplay()
         }
+
+        publishWidgetState()
     }
 
     public func toggleTimer() {
@@ -211,6 +219,7 @@ public final class PomodoroSessionController: ObservableObject {
         if shouldSync {
             syncManager.publishState(duration: durationSeconds, startedAt: startDate, isRunning: true)
         }
+        publishWidgetState()
     }
 
     private func stopSession(shouldSync: Bool) {
@@ -225,6 +234,7 @@ public final class PomodoroSessionController: ObservableObject {
         }
         activeDuration = 0
         remaining = TimeInterval(minutes * 60)
+        publishWidgetState()
     }
 
     private func handleStopRequest() {
@@ -273,5 +283,43 @@ public final class PomodoroSessionController: ObservableObject {
         let minutes = max(0, seconds) / 60
         let seconds = max(0, seconds) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    // MARK: - Widget Integration
+
+    public func checkWidgetCommands() {
+        guard let command = widgetStateManager.consumeCommand() else { return }
+        switch command {
+        case .start:
+            if !isRunning {
+                resetDeepBreath()
+                startSession(durationSeconds: minutes * 60, startDate: Date(), shouldSync: true)
+            }
+        case .stop:
+            if isRunning {
+                resetDeepBreath()
+                stopSession(shouldSync: true)
+            }
+        }
+    }
+
+    private func publishWidgetState() {
+        let endsAt: Date? = isRunning ? currentSessionStart?.addingTimeInterval(TimeInterval(currentDurationSeconds)) : nil
+        let state = WidgetTimerState(
+            isRunning: isRunning,
+            remainingSeconds: Int(remaining),
+            durationSeconds: currentDurationSeconds,
+            startedAt: currentSessionStart,
+            endsAt: endsAt,
+            minutes: minutes
+        )
+        widgetStateManager.saveState(state)
+        reloadWidgets()
+    }
+
+    private func reloadWidgets() {
+        #if canImport(WidgetKit) && os(iOS)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 }

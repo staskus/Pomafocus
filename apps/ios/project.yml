@@ -36,6 +36,7 @@ targets:
       - package: PomafocusRoot
         product: PomafocusKit
       - target: PomafocusActivities
+      - target: PomafocusHomeWidgets
       - target: PomafocusShield
     settings:
       base:
@@ -63,6 +64,25 @@ targets:
         CODE_SIGN_STYLE: Automatic
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.activities
+    resources:
+      - path: Sources/Assets.xcassets
+  PomafocusHomeWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: HomeWidgets
+    dependencies:
+      - package: PomafocusRoot
+        product: PomafocusKit
+    entitlements:
+      path: HomeWidgets/HomeWidgets.entitlements
+    settings:
+      base:
+        INFOPLIST_FILE: HomeWidgets/Info.plist
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: minimal
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.homewidgets
     resources:
       - path: Sources/Assets.xcassets
   PomafocusShield:

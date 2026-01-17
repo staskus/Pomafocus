@@ -71,16 +71,17 @@ targets:
     platform: iOS
     sources:
       - path: HomeWidgets
+        excludes:
+          - "*.entitlements"
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit
-    entitlements:
-      path: HomeWidgets/HomeWidgets.entitlements
     settings:
       base:
         INFOPLIST_FILE: HomeWidgets/Info.plist
         DEVELOPMENT_TEAM: L4KYCD4RPZ
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: HomeWidgets/HomeWidgets.entitlements
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.homewidgets
     resources:

@@ -32,18 +32,25 @@ end
 platform :ios do
   desc "Register App Group in Developer Portal"
   lane :register_app_group do
-    produce(
-      app_group: true,
-      group_name: "Pomafocus",
-      group_identifier: config[:app_group]
-    )
-    UI.success("App Group registered: #{config[:app_group]}")
+    require 'spaceship'
+
+    Spaceship::Portal.login(config[:apple_id])
+    Spaceship::Portal.client.team_id = config[:team_id]
+
+    group_id = config[:app_group]
+    existing = Spaceship::Portal.app_group.find(group_id)
+
+    if existing
+      UI.success("App Group already exists: #{group_id}")
+    else
+      Spaceship::Portal.app_group.create!(group_id: group_id, name: "Pomafocus")
+      UI.success("App Group registered: #{group_id}")
+    end
   end
 
   desc "Register iCloud container"
   lane :register_icloud_container do
-    # Note: produce doesn't support iCloud containers directly
-    # This is handled by Xcode automatic signing
+    # Note: iCloud containers are handled by Xcode automatic signing
     UI.important("iCloud container handled by Xcode automatic signing")
     UI.important("Container: #{config[:icloud_container]}")
   end
@@ -95,21 +102,31 @@ platform :ios do
 
   desc "Associate App Group with App IDs that need it"
   lane :associate_app_groups do
+    require 'spaceship'
+
+    Spaceship::Portal.login(config[:apple_id])
+    Spaceship::Portal.client.team_id = config[:team_id]
+
     ids = config[:bundle_ids]
-    group = config[:app_group]
-    team = config[:team_id]
+    group_id = config[:app_group]
 
     [ids[:main], ids[:widgets]].each do |app_id|
-      produce(
-        app_identifier: app_id,
-        skip_itc: true,
-        enable_services: {
-          app_group: "on"
-        }
-      )
-      # Associate the specific group
-      sh("fastlane produce associate_group -a #{app_id} #{group} --team_id #{team}")
-      UI.success("Associated #{group} with #{app_id}")
+      app = Spaceship::Portal.app.find(app_id)
+      if app
+        # Enable App Groups capability
+        app.update_service(Spaceship::Portal.app_service.app_group.on)
+
+        # Associate the group
+        group = Spaceship::Portal.app_group.find(group_id)
+        if group
+          app.associate_groups([group])
+          UI.success("Associated #{group_id} with #{app_id}")
+        else
+          UI.error("App Group not found: #{group_id}")
+        end
+      else
+        UI.error("App ID not found: #{app_id}")
+      end
     end
   end
 

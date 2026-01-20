@@ -44,6 +44,8 @@ apps/ios/*.ipa
 apps/ios/*.dSYM.zip
 apps/ios/*.mobileprovision
 apps/ios/*.cer
+apps/ios/*.p12
+apps/ios/*.certSigningRequest
 apps/ios/build/
 apps/ios/vendor/
 apps/ios/.bundle/

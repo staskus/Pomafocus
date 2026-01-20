@@ -40,9 +40,10 @@ targets:
       - target: PomafocusShield
     settings:
       base:
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: L4KYCD4RPZ
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
         SWIFT_VERSION: "5.10"
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
@@ -61,7 +62,8 @@ targets:
       base:
         INFOPLIST_FILE: Widgets/Info.plist
         DEVELOPMENT_TEAM: L4KYCD4RPZ
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios.activities Development"
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.activities
     resources:
@@ -80,7 +82,8 @@ targets:
       base:
         INFOPLIST_FILE: HomeWidgets/Info.plist
         DEVELOPMENT_TEAM: L4KYCD4RPZ
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios.homewidgets Development"
         CODE_SIGN_ENTITLEMENTS: HomeWidgets/HomeWidgets.entitlements
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.homewidgets
@@ -95,6 +98,7 @@ targets:
       base:
         INFOPLIST_FILE: ShieldExtension/Info.plist
         DEVELOPMENT_TEAM: L4KYCD4RPZ
-        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios.shield Development"
         SWIFT_STRICT_CONCURRENCY: minimal
         PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios.shield

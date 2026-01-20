@@ -47,4 +47,5 @@ apps/ios/*.cer
 apps/ios/build/
 apps/ios/vendor/
 apps/ios/.bundle/
+apps/ios/profiles/
 Gemfile.lock

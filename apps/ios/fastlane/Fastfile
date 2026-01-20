@@ -30,6 +30,17 @@ def config
 end
 
 platform :ios do
+  desc "Get or create iOS development certificate"
+  lane :setup_certificates do
+    get_certificates(
+      development: true,
+      username: config[:apple_id],
+      team_id: config[:team_id],
+      keychain_path: File.expand_path("~/Library/Keychains/login.keychain-db")
+    )
+    UI.success("Development certificate ready")
+  end
+
   desc "Register App Group in Developer Portal"
   lane :register_app_group do
     require 'spaceship'
@@ -48,19 +59,13 @@ platform :ios do
     end
   end
 
-  desc "Register iCloud container"
-  lane :register_icloud_container do
-    # Note: iCloud containers are handled by Xcode automatic signing
-    UI.important("iCloud container handled by Xcode automatic signing")
-    UI.important("Container: #{config[:icloud_container]}")
-  end
-
   desc "Register all App IDs with capabilities"
   lane :register_app_ids do
     ids = config[:bundle_ids]
 
     # Main app with full capabilities
     produce(
+      username: config[:apple_id],
       app_identifier: ids[:main],
       app_name: "Pomafocus",
       skip_itc: true,
@@ -74,6 +79,7 @@ platform :ios do
 
     # Home Widgets with App Groups
     produce(
+      username: config[:apple_id],
       app_identifier: ids[:widgets],
       app_name: "Pomafocus Home Widgets",
       skip_itc: true,
@@ -85,6 +91,7 @@ platform :ios do
 
     # Activities (no special capabilities)
     produce(
+      username: config[:apple_id],
       app_identifier: ids[:activities],
       app_name: "Pomafocus Activities",
       skip_itc: true
@@ -93,6 +100,7 @@ platform :ios do
 
     # Shield (no special capabilities)
     produce(
+      username: config[:apple_id],
       app_identifier: ids[:shield],
       app_name: "Pomafocus Shield",
       skip_itc: true
@@ -100,7 +108,7 @@ platform :ios do
     UI.success("Registered: #{ids[:shield]}")
   end
 
-  desc "Associate App Group with App IDs that need it"
+  desc "Associate App Group with App IDs"
   lane :associate_app_groups do
     require 'spaceship'
 
@@ -113,10 +121,7 @@ platform :ios do
     [ids[:main], ids[:widgets]].each do |app_id|
       app = Spaceship::Portal.app.find(app_id)
       if app
-        # Enable App Groups capability
         app.update_service(Spaceship::Portal.app_service.app_group.on)
-
-        # Associate the group
         group = Spaceship::Portal.app_group.find(group_id)
         if group
           app.associate_groups([group])
@@ -130,31 +135,97 @@ platform :ios do
     end
   end
 
-  desc "Generate development provisioning profiles"
-  lane :generate_dev_profiles do
-    config[:bundle_ids].each do |name, app_id|
-      get_provisioning_profile(
-        app_identifier: app_id,
-        development: true,
-        force: true,
-        team_id: config[:team_id]
-      )
-      UI.success("Dev profile for: #{app_id}")
-    end
+  desc "Generate and download provisioning profiles"
+  lane :setup_profiles do
+    ids = config[:bundle_ids]
+    team = config[:team_id]
+
+    # Main app - needs App Groups
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:main],
+      development: true,
+      force: true,
+      team_id: team,
+      filename: "Pomafocus_Development.mobileprovision",
+      output_path: "./profiles"
+    )
+    UI.success("Profile for main app: #{ids[:main]}")
+
+    # Widgets - needs App Groups
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:widgets],
+      development: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusHomeWidgets_Development.mobileprovision",
+      output_path: "./profiles"
+    )
+    UI.success("Profile for widgets: #{ids[:widgets]}")
+
+    # Activities - no special entitlements
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:activities],
+      development: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusActivities_Development.mobileprovision",
+      output_path: "./profiles"
+    )
+    UI.success("Profile for activities: #{ids[:activities]}")
+
+    # Shield - no special entitlements
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:shield],
+      development: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusShield_Development.mobileprovision",
+      output_path: "./profiles"
+    )
+    UI.success("Profile for shield: #{ids[:shield]}")
+
+    # Install profiles
+    install_provisioning_profile(path: "./profiles/Pomafocus_Development.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusHomeWidgets_Development.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusActivities_Development.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusShield_Development.mobileprovision")
+
+    UI.success("All profiles installed")
   end
 
-  desc "Full signing setup - run all steps"
+  desc "Full signing setup - certificates, app IDs, profiles"
   lane :setup_signing do
     UI.header("Setting up Pomafocus signing...")
     UI.message("Apple ID: #{config[:apple_id]}")
     UI.message("Team ID: #{config[:team_id]}")
     UI.message("")
 
+    # Create profiles directory
+    FileUtils.mkdir_p("./profiles")
+
+    # Step 1: Get development certificate
+    UI.message("Step 1/5: Setting up certificates...")
+    setup_certificates
+
+    # Step 2: Register App Group
+    UI.message("Step 2/5: Registering App Group...")
     register_app_group
+
+    # Step 3: Register App IDs
+    UI.message("Step 3/5: Registering App IDs...")
     register_app_ids
+
+    # Step 4: Associate App Groups
+    UI.message("Step 4/5: Associating App Groups...")
     associate_app_groups
-    generate_dev_profiles
-    register_icloud_container
+
+    # Step 5: Generate and install profiles
+    UI.message("Step 5/5: Generating provisioning profiles...")
+    setup_profiles
 
     UI.success("")
     UI.success("=" * 50)

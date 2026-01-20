@@ -1,0 +1,13 @@
+require 'dotenv'
+Dotenv.load('../.env')
+
+# Validate required environment variables
+def require_env(name)
+  value = ENV[name]
+  UI.user_error!("Missing required environment variable: #{name}\nPlease create apps/ios/.env from .env.example") if value.nil? || value.empty?
+  value
+end
+
+app_identifier("#{require_env('BUNDLE_ID_PREFIX')}.ios")
+apple_id(require_env('APPLE_ID'))
+team_id(require_env('TEAM_ID'))

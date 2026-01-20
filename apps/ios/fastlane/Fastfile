@@ -1,0 +1,151 @@
+default_platform(:ios)
+
+require 'dotenv'
+Dotenv.load('../.env')
+
+# Helper to require environment variables
+def require_env(name)
+  value = ENV[name]
+  UI.user_error!("Missing required environment variable: #{name}\nPlease create apps/ios/.env from .env.example") if value.nil? || value.empty?
+  value
+end
+
+# Load configuration from environment
+def config
+  @config ||= begin
+    prefix = require_env('BUNDLE_ID_PREFIX')
+    {
+      team_id: require_env('TEAM_ID'),
+      apple_id: require_env('APPLE_ID'),
+      app_group: require_env('APP_GROUP_ID'),
+      icloud_container: require_env('ICLOUD_CONTAINER_ID'),
+      bundle_ids: {
+        main: "#{prefix}.ios",
+        widgets: "#{prefix}.ios.homewidgets",
+        activities: "#{prefix}.ios.activities",
+        shield: "#{prefix}.ios.shield"
+      }
+    }
+  end
+end
+
+platform :ios do
+  desc "Register App Group in Developer Portal"
+  lane :register_app_group do
+    produce(
+      app_group: true,
+      group_name: "Pomafocus",
+      group_identifier: config[:app_group]
+    )
+    UI.success("App Group registered: #{config[:app_group]}")
+  end
+
+  desc "Register iCloud container"
+  lane :register_icloud_container do
+    # Note: produce doesn't support iCloud containers directly
+    # This is handled by Xcode automatic signing
+    UI.important("iCloud container handled by Xcode automatic signing")
+    UI.important("Container: #{config[:icloud_container]}")
+  end
+
+  desc "Register all App IDs with capabilities"
+  lane :register_app_ids do
+    ids = config[:bundle_ids]
+
+    # Main app with full capabilities
+    produce(
+      app_identifier: ids[:main],
+      app_name: "Pomafocus",
+      skip_itc: true,
+      enable_services: {
+        push_notification: "on",
+        icloud: "cloudkit",
+        app_group: "on"
+      }
+    )
+    UI.success("Registered: #{ids[:main]}")
+
+    # Home Widgets with App Groups
+    produce(
+      app_identifier: ids[:widgets],
+      app_name: "Pomafocus Home Widgets",
+      skip_itc: true,
+      enable_services: {
+        app_group: "on"
+      }
+    )
+    UI.success("Registered: #{ids[:widgets]}")
+
+    # Activities (no special capabilities)
+    produce(
+      app_identifier: ids[:activities],
+      app_name: "Pomafocus Activities",
+      skip_itc: true
+    )
+    UI.success("Registered: #{ids[:activities]}")
+
+    # Shield (no special capabilities)
+    produce(
+      app_identifier: ids[:shield],
+      app_name: "Pomafocus Shield",
+      skip_itc: true
+    )
+    UI.success("Registered: #{ids[:shield]}")
+  end
+
+  desc "Associate App Group with App IDs that need it"
+  lane :associate_app_groups do
+    ids = config[:bundle_ids]
+    group = config[:app_group]
+    team = config[:team_id]
+
+    [ids[:main], ids[:widgets]].each do |app_id|
+      produce(
+        app_identifier: app_id,
+        skip_itc: true,
+        enable_services: {
+          app_group: "on"
+        }
+      )
+      # Associate the specific group
+      sh("fastlane produce associate_group -a #{app_id} #{group} --team_id #{team}")
+      UI.success("Associated #{group} with #{app_id}")
+    end
+  end
+
+  desc "Generate development provisioning profiles"
+  lane :generate_dev_profiles do
+    config[:bundle_ids].each do |name, app_id|
+      get_provisioning_profile(
+        app_identifier: app_id,
+        development: true,
+        force: true,
+        team_id: config[:team_id]
+      )
+      UI.success("Dev profile for: #{app_id}")
+    end
+  end
+
+  desc "Full signing setup - run all steps"
+  lane :setup_signing do
+    UI.header("Setting up Pomafocus signing...")
+    UI.message("Apple ID: #{config[:apple_id]}")
+    UI.message("Team ID: #{config[:team_id]}")
+    UI.message("")
+
+    register_app_group
+    register_app_ids
+    associate_app_groups
+    generate_dev_profiles
+    register_icloud_container
+
+    UI.success("")
+    UI.success("=" * 50)
+    UI.success("Signing setup complete!")
+    UI.success("=" * 50)
+    UI.success("")
+    UI.success("Next steps:")
+    UI.success("1. Run: ./Scripts/generate_ios_project.sh")
+    UI.success("2. Open Xcode and build")
+  end
+end

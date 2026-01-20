@@ -34,7 +34,38 @@ The workspace exposes two schemes:
 - **Pomafocus** – iOS app + Live Activity widget extension.
 - **PomafocusMac** – AppKit menu bar host that links against `PomafocusKit`.
 
-Signing is configured for team `L4KYCD4RPZ`. If you need to switch accounts, update `project.yml` + entitlements before regenerating.
+## Signing Setup
+
+Signing is managed via Fastlane with environment-based configuration. This allows anyone to build the project with their own Apple Developer account.
+
+### First-time Setup
+
+1. Copy the environment template:
+   ```sh
+   cp apps/ios/.env.example apps/ios/.env
+   ```
+
+2. Edit `apps/ios/.env` with your Apple Developer credentials:
+   ```
+   APPLE_ID=your.email@example.com
+   TEAM_ID=XXXXXXXXXX
+   BUNDLE_ID_PREFIX=com.yourcompany.pomafocus
+   APP_GROUP_ID=group.com.yourcompany.pomafocus
+   ICLOUD_CONTAINER_ID=iCloud.com.yourcompany.pomafocus
+   ```
+
+3. Run the signing setup script:
+   ```sh
+   ./Scripts/setup_signing.sh
+   ```
+
+This will automatically:
+- Register the App Group in Apple Developer Portal
+- Create all required App IDs with capabilities (Push, iCloud, App Groups)
+- Associate App Groups with the main app and widgets
+- Generate development provisioning profiles
+
+After setup completes, regenerate the Xcode project and build as usual.
 
 ## Running & Testing
 

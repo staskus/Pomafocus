@@ -30,7 +30,10 @@ apps/macos/.swiftpm/
 apps/macos/.build/
 apps/macos/.swiftpm/
 
-# Fastlane artifacts (future-proof)
+# Environment (contains secrets)
+apps/ios/.env
+
+# Fastlane artifacts
 apps/ios/fastlane/README.md
 apps/ios/fastlane/report.xml
 apps/ios/fastlane/Preview.html
@@ -40,4 +43,8 @@ apps/ios/fastlane/logs/
 apps/ios/*.ipa
 apps/ios/*.dSYM.zip
 apps/ios/*.mobileprovision
+apps/ios/*.cer
 apps/ios/build/
+apps/ios/vendor/
+apps/ios/.bundle/
+Gemfile.lock

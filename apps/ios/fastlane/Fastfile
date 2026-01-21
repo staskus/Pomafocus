@@ -145,6 +145,9 @@ platform :ios do
   lane :setup_profiles do
     ids = config[:bundle_ids]
     team = config[:team_id]
+    # Let sigh choose any valid certificate from the keychain.
+    ENV.delete("SIGH_CERTIFICATE_ID")
+    ENV.delete("SIGH_CERTIFICATE_NAME")
 
     # Main app - needs App Groups
     get_provisioning_profile(

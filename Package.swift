@@ -13,11 +13,16 @@ let package = Package(
         .library(
             name: "PomafocusKit",
             targets: ["PomafocusKit"]
+        ),
+        .library(
+            name: "PomafocusWidgetKit",
+            targets: ["PomafocusWidgetKit"]
         )
     ],
     targets: [
         .target(
             name: "PomafocusKit",
+            dependencies: ["PomafocusWidgetKit"],
             swiftSettings: [
                 .unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"])
             ],
@@ -25,6 +30,13 @@ let package = Package(
                 .linkedFramework("CloudKit"),
                 .linkedFramework("FamilyControls", .when(platforms: [.iOS])),
                 .linkedFramework("ManagedSettings", .when(platforms: [.iOS]))
+            ]
+        ),
+        .target(
+            name: "PomafocusWidgetKit",
+            path: "Sources/PomafocusWidgetKit",
+            swiftSettings: [
+                .unsafeFlags(["-Xfrontend", "-strict-concurrency=minimal"])
             ]
         ),
         .testTarget(

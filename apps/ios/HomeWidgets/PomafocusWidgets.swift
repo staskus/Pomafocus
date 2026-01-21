@@ -1,7 +1,7 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
-import PomafocusKit
+import PomafocusWidgetKit
 
 // MARK: - Colors
 

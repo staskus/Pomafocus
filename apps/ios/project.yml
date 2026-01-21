@@ -77,7 +77,7 @@ targets:
           - "*.entitlements"
     dependencies:
       - package: PomafocusRoot
-        product: PomafocusKit
+        product: PomafocusWidgetKit
     settings:
       base:
         INFOPLIST_FILE: HomeWidgets/Info.plist

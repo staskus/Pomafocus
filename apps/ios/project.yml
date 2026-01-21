@@ -55,6 +55,7 @@ targets:
           PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
         Release:
           CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_ENTITLEMENTS: PomafocusAdHoc.entitlements
           PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Ad Hoc"
   PomafocusActivities:
     type: app-extension

@@ -78,7 +78,8 @@ platform :ios do
       enable_services: {
         push_notification: "on",
         icloud: "cloudkit",
-        app_group: "on"
+        app_group: "on",
+        family_controls: "on"
       }
     )
     UI.success("Registered: #{ids[:main]}")

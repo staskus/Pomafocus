@@ -38,7 +38,13 @@ platform :ios do
       team_id: config[:team_id],
       keychain_path: File.expand_path("~/Library/Keychains/login.keychain-db")
     )
-    UI.success("Development certificate ready")
+    get_certificates(
+      development: false,
+      username: config[:apple_id],
+      team_id: config[:team_id],
+      keychain_path: File.expand_path("~/Library/Keychains/login.keychain-db")
+    )
+    UI.success("Certificates ready")
   end
 
   desc "Register App Group in Developer Portal"
@@ -188,11 +194,64 @@ platform :ios do
     )
     UI.success("Profile for shield: #{ids[:shield]}")
 
+    # Ad-hoc profiles for OTA builds
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:main],
+      adhoc: true,
+      force: true,
+      team_id: team,
+      filename: "Pomafocus_AdHoc.mobileprovision",
+      output_path: "./profiles",
+      provisioning_name: "#{ids[:main]} Ad Hoc"
+    )
+    UI.success("Ad-hoc profile for main app: #{ids[:main]}")
+
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:widgets],
+      adhoc: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusHomeWidgets_AdHoc.mobileprovision",
+      output_path: "./profiles",
+      provisioning_name: "#{ids[:widgets]} Ad Hoc"
+    )
+    UI.success("Ad-hoc profile for widgets: #{ids[:widgets]}")
+
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:activities],
+      adhoc: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusActivities_AdHoc.mobileprovision",
+      output_path: "./profiles",
+      provisioning_name: "#{ids[:activities]} Ad Hoc"
+    )
+    UI.success("Ad-hoc profile for activities: #{ids[:activities]}")
+
+    get_provisioning_profile(
+      username: config[:apple_id],
+      app_identifier: ids[:shield],
+      adhoc: true,
+      force: true,
+      team_id: team,
+      filename: "PomafocusShield_AdHoc.mobileprovision",
+      output_path: "./profiles",
+      provisioning_name: "#{ids[:shield]} Ad Hoc"
+    )
+    UI.success("Ad-hoc profile for shield: #{ids[:shield]}")
+
     # Install profiles
     install_provisioning_profile(path: "./profiles/Pomafocus_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusHomeWidgets_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusActivities_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusShield_Development.mobileprovision")
+    install_provisioning_profile(path: "./profiles/Pomafocus_AdHoc.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusHomeWidgets_AdHoc.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusActivities_AdHoc.mobileprovision")
+    install_provisioning_profile(path: "./profiles/PomafocusShield_AdHoc.mobileprovision")
 
     UI.success("All profiles installed")
   end

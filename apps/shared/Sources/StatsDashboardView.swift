@@ -1,0 +1,174 @@
+import SwiftUI
+import PomafocusKit
+
+@MainActor
+public struct StatsDashboardView: View {
+    private let statsStore: StatsStore
+    @State private var rollups: [DailyFocusStats] = []
+    @State private var weeklySummary = WeeklyFocusSummary(
+        totalMinutes: 0,
+        sessionsStarted: 0,
+        sessionsCompleted: 0,
+        completionRate: 0,
+        currentStreakDays: 0
+    )
+
+    public init(statsStore: StatsStore = .shared) {
+        self.statsStore = statsStore
+    }
+
+    public var body: some View {
+        ZStack {
+            BrutalistColors.background
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: BrutalistSpacing.lg) {
+                    header
+                    weeklyHero
+                    streakRow
+                    weeklyChart
+                }
+                .padding(BrutalistSpacing.md)
+            }
+        }
+        .onAppear(perform: refreshStats)
+    }
+
+    private var header: some View {
+        HStack {
+            Text("STATS")
+                .font(BrutalistTypography.title(28))
+                .foregroundStyle(BrutalistColors.textPrimary)
+                .tracking(2)
+            Spacer()
+        }
+        .padding(.top, BrutalistSpacing.sm)
+    }
+
+    private var weeklyHero: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("THIS WEEK")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            HStack(alignment: .firstTextBaseline, spacing: BrutalistSpacing.sm) {
+                Text("\(weeklySummary.totalMinutes)")
+                    .font(BrutalistTypography.timer(48))
+                    .foregroundStyle(BrutalistColors.textPrimary)
+                    .monospacedDigit()
+                Text("MIN")
+                    .font(BrutalistTypography.headline)
+                    .foregroundStyle(BrutalistColors.textSecondary)
+            }
+
+            HStack(spacing: BrutalistSpacing.md) {
+                metricPill(title: "SESSIONS", value: "\(weeklySummary.sessionsCompleted)/\(weeklySummary.sessionsStarted)")
+                metricPill(title: "COMPLETE", value: formattedPercent(weeklySummary.completionRate))
+            }
+        }
+        .padding(BrutalistSpacing.lg)
+        .modifier(BrutalistCardModifier())
+    }
+
+    private var streakRow: some View {
+        HStack(spacing: BrutalistSpacing.md) {
+            statCard(title: "CURRENT STREAK", value: "\(weeklySummary.currentStreakDays) DAYS")
+            statCard(title: "WEEKLY AVG", value: weeklyAverageText)
+        }
+    }
+
+    private var weeklyChart: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("7-DAY FLOW")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            HStack(alignment: .bottom, spacing: BrutalistSpacing.sm) {
+                ForEach(rollups, id: \.date) { day in
+                    VStack(spacing: BrutalistSpacing.xs) {
+                        Rectangle()
+                            .fill(BrutalistColors.red)
+                            .frame(height: barHeight(for: day))
+                            .frame(maxWidth: .infinity)
+                        Text(shortWeekday(for: day.date))
+                            .font(BrutalistTypography.mono)
+                            .foregroundStyle(BrutalistColors.textSecondary)
+                    }
+                }
+            }
+            .frame(height: 140)
+        }
+        .padding(BrutalistSpacing.md)
+        .modifier(BrutalistCardModifier())
+    }
+
+    private func refreshStats() {
+        weeklySummary = statsStore.weeklySummary()
+        rollups = statsStore.dailyRollups(days: 7)
+    }
+
+    private func metricPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+            Text(value)
+                .font(BrutalistTypography.headline)
+                .foregroundStyle(BrutalistColors.textPrimary)
+        }
+        .padding(.vertical, BrutalistSpacing.sm)
+        .padding(.horizontal, BrutalistSpacing.md)
+        .background(BrutalistColors.surfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+        .overlay(
+            RoundedRectangle(cornerRadius: BrutalistRadius.sm)
+                .stroke(BrutalistColors.border, lineWidth: 1)
+        )
+    }
+
+    private func statCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text(title)
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+            Text(value)
+                .font(BrutalistTypography.headline)
+                .foregroundStyle(BrutalistColors.textPrimary)
+        }
+        .padding(BrutalistSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(BrutalistCardModifier())
+    }
+
+    private func barHeight(for day: DailyFocusStats) -> CGFloat {
+        let maxMinutes = max(rollups.map(\.totalMinutes).max() ?? 0, 1)
+        let ratio = CGFloat(day.totalMinutes) / CGFloat(maxMinutes)
+        return max(8, ratio * 110)
+    }
+
+    private func shortWeekday(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EE"
+        return formatter.string(from: date).uppercased()
+    }
+
+    private func formattedPercent(_ value: Double) -> String {
+        let percent = Int(round(value * 100))
+        return "\(percent)%"
+    }
+
+    private var weeklyAverageText: String {
+        let average = rollups.isEmpty ? 0 : weeklySummary.totalMinutes / max(rollups.count, 1)
+        return "\(average) MIN"
+    }
+}
+
+#Preview {
+    StatsDashboardView()
+}

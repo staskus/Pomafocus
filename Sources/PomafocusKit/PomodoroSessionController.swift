@@ -53,6 +53,7 @@ public final class PomodoroSessionController: ObservableObject {
     private let syncManager: PomodoroSyncManaging
     private let blocker: PomodoroBlocking
     private let widgetStateManager: WidgetStateManager
+    private let statsStore: StatsStore
     private var activeDuration: Int = 0
     public static let deepBreathDuration: TimeInterval = 30
     public static let deepBreathConfirmationWindow: TimeInterval = 60
@@ -65,7 +66,8 @@ public final class PomodoroSessionController: ObservableObject {
         deepBreathClock: @escaping () -> Date = Date.init,
         syncManager: PomodoroSyncManaging? = nil,
         blocker: PomodoroBlocking? = nil,
-        widgetStateManager: WidgetStateManager? = nil
+        widgetStateManager: WidgetStateManager? = nil,
+        statsStore: StatsStore? = nil
     ) {
         self.timer = timer ?? PomodoroTimer()
         self.deepBreathTimer = deepBreathTimer ?? PomodoroTimer()
@@ -73,6 +75,7 @@ public final class PomodoroSessionController: ObservableObject {
         self.syncManager = syncManager ?? PomodoroSyncManager.shared
         self.blocker = blocker ?? PomodoroBlocker.shared
         self.widgetStateManager = widgetStateManager ?? WidgetStateManager.shared
+        self.statsStore = statsStore ?? StatsStore.shared
         self.deepBreathClock = deepBreathClock
 
         self.syncManager.start()
@@ -124,7 +127,7 @@ public final class PomodoroSessionController: ObservableObject {
     public func applyExternalState(_ state: PomodoroSharedState) {
         guard state.originIdentifier != syncManager.deviceIdentifier else { return }
         guard state.isRunning, let started = state.startedAt else {
-            stopSession(shouldSync: false)
+            stopSession(shouldSync: false, outcome: nil)
             return
         }
         minutes = max(1, state.duration / 60)
@@ -162,7 +165,7 @@ public final class PomodoroSessionController: ObservableObject {
             #if canImport(Combine)
             self.events.send(.completed)
             #endif
-            self.stopSession(shouldSync: true)
+            self.stopSession(shouldSync: true, outcome: .completed)
         }
     }
 
@@ -228,7 +231,17 @@ public final class PomodoroSessionController: ObservableObject {
         publishWidgetState()
     }
 
-    private func stopSession(shouldSync: Bool) {
+    private func stopSession(shouldSync: Bool, outcome: FocusSessionOutcome?) {
+        if let outcome, let start = currentSessionStart {
+            let end = Date()
+            let duration = max(activeDuration, Int(end.timeIntervalSince(start)))
+            statsStore.recordSession(
+                startedAt: start,
+                endedAt: end,
+                durationSeconds: duration,
+                outcome: outcome
+            )
+        }
         resetDeepBreath()
         timer.stop()
         blocker.endBlocking()
@@ -248,12 +261,12 @@ public final class PomodoroSessionController: ObservableObject {
         if deepBreathEnabled {
             if deepBreathReady {
                 resetDeepBreath()
-                stopSession(shouldSync: true)
+                stopSession(shouldSync: true, outcome: .stopped)
             } else if deepBreathRemaining == nil {
                 beginDeepBreathCountdown()
             }
         } else {
-            stopSession(shouldSync: true)
+            stopSession(shouldSync: true, outcome: .stopped)
         }
     }
 

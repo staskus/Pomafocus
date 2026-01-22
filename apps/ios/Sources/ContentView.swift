@@ -9,7 +9,17 @@ struct ContentView: View {
     }
 
     var body: some View {
-        PomodoroDashboardView(session: session)
+        TabView {
+            PomodoroDashboardView(session: session)
+                .tabItem {
+                    Label("Focus", systemImage: "timer")
+                }
+
+            StatsDashboardView()
+                .tabItem {
+                    Label("Stats", systemImage: "chart.bar")
+                }
+        }
     }
 }
 

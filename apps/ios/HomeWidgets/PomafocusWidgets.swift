@@ -19,11 +19,10 @@ struct ToggleTimerIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         let state = WidgetStateManager.shared.loadState()
-        if state.isRunning {
-            WidgetStateManager.shared.saveCommand(.stop)
-        } else {
-            WidgetStateManager.shared.saveCommand(.start)
-        }
+        let command: WidgetStateManager.Command = state.isRunning ? .stop : .start
+        let updatedState = applyWidgetCommand(command, to: state)
+        WidgetStateManager.shared.saveState(updatedState)
+        WidgetStateManager.shared.saveCommand(command)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
@@ -35,6 +34,9 @@ struct StartTimerIntent: AppIntent {
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
+        let state = WidgetStateManager.shared.loadState()
+        let updatedState = applyWidgetCommand(.start, to: state)
+        WidgetStateManager.shared.saveState(updatedState)
         WidgetStateManager.shared.saveCommand(.start)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
@@ -47,6 +49,9 @@ struct StopTimerIntent: AppIntent {
     static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
+        let state = WidgetStateManager.shared.loadState()
+        let updatedState = applyWidgetCommand(.stop, to: state)
+        WidgetStateManager.shared.saveState(updatedState)
         WidgetStateManager.shared.saveCommand(.stop)
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
@@ -69,6 +74,11 @@ struct PomafocusTimelineProvider: TimelineProvider {
         let state = WidgetStateManager.shared.loadState()
         let currentDate = Date()
         let normalizedState = state.normalized(for: currentDate)
+
+        if let timeline = buildDeepBreathTimeline(state: normalizedState, currentDate: currentDate) {
+            completion(Timeline(entries: timeline.entries, policy: timeline.policy))
+            return
+        }
 
         var entries: [PomafocusEntry] = []
 
@@ -115,6 +125,114 @@ struct PomafocusTimelineProvider: TimelineProvider {
 struct PomafocusEntry: TimelineEntry {
     let date: Date
     let state: WidgetTimerState
+}
+
+private func applyWidgetCommand(_ command: WidgetStateManager.Command, to state: WidgetTimerState) -> WidgetTimerState {
+    var updated = state
+    let now = Date()
+
+    switch command {
+    case .start:
+        guard !updated.isRunning else { return updated }
+        if updated.durationSeconds <= 0 {
+            updated.durationSeconds = max(1, updated.minutes * 60)
+        }
+        updated.isRunning = true
+        updated.remainingSeconds = updated.durationSeconds
+        updated.startedAt = now
+        updated.endsAt = now.addingTimeInterval(TimeInterval(updated.durationSeconds))
+        updated.deepBreathRemainingSeconds = nil
+        updated.deepBreathReady = false
+        updated.deepBreathConfirmationRemainingSeconds = nil
+    case .stop:
+        guard updated.isRunning else { return updated }
+        if updated.deepBreathEnabled {
+            if updated.deepBreathReady {
+                updated.isRunning = false
+                updated.remainingSeconds = updated.durationSeconds
+                updated.startedAt = nil
+                updated.endsAt = nil
+                updated.deepBreathRemainingSeconds = nil
+                updated.deepBreathReady = false
+                updated.deepBreathConfirmationRemainingSeconds = nil
+            } else if updated.deepBreathRemainingSeconds == nil {
+                updated.deepBreathRemainingSeconds = WidgetTimerState.deepBreathDuration
+                updated.deepBreathReady = false
+                updated.deepBreathConfirmationRemainingSeconds = nil
+            }
+        } else {
+            updated.isRunning = false
+            updated.remainingSeconds = updated.durationSeconds
+            updated.startedAt = nil
+            updated.endsAt = nil
+            updated.deepBreathRemainingSeconds = nil
+            updated.deepBreathReady = false
+            updated.deepBreathConfirmationRemainingSeconds = nil
+        }
+    }
+
+    return updated
+}
+
+private struct DeepBreathTimeline {
+    let entries: [PomafocusEntry]
+    let policy: TimelineReloadPolicy
+}
+
+private func buildDeepBreathTimeline(state: WidgetTimerState, currentDate: Date) -> DeepBreathTimeline? {
+    if let remaining = state.deepBreathRemainingSeconds {
+        let entryCount = min(max(remaining, 0), 60)
+        var entries: [PomafocusEntry] = []
+
+        for offset in 0..<entryCount {
+            let entryDate = currentDate.addingTimeInterval(TimeInterval(offset))
+            var entryState = state
+            entryState.deepBreathRemainingSeconds = max(0, remaining - offset)
+            entries.append(PomafocusEntry(date: entryDate, state: entryState))
+        }
+
+        let endDate = currentDate.addingTimeInterval(TimeInterval(max(remaining, 0)))
+        if remaining <= 60 {
+            var finalState = state
+            finalState.deepBreathRemainingSeconds = nil
+            finalState.deepBreathReady = true
+            finalState.deepBreathConfirmationRemainingSeconds = WidgetTimerState.deepBreathConfirmationWindow
+            entries.append(PomafocusEntry(date: endDate, state: finalState))
+            let nextUpdate = endDate.addingTimeInterval(1)
+            return DeepBreathTimeline(entries: entries, policy: .after(nextUpdate))
+        }
+
+        let nextUpdate = currentDate.addingTimeInterval(60)
+        return DeepBreathTimeline(entries: entries, policy: .after(nextUpdate))
+    }
+
+    if state.deepBreathReady {
+        let remaining = state.deepBreathConfirmationRemainingSeconds ?? WidgetTimerState.deepBreathConfirmationWindow
+        let entryCount = min(max(remaining, 0), 60)
+        var entries: [PomafocusEntry] = []
+
+        for offset in 0..<entryCount {
+            let entryDate = currentDate.addingTimeInterval(TimeInterval(offset))
+            var entryState = state
+            entryState.deepBreathConfirmationRemainingSeconds = max(0, remaining - offset)
+            entries.append(PomafocusEntry(date: entryDate, state: entryState))
+        }
+
+        let endDate = currentDate.addingTimeInterval(TimeInterval(max(remaining, 0)))
+        if remaining <= 60 {
+            var finalState = state
+            finalState.deepBreathReady = false
+            finalState.deepBreathConfirmationRemainingSeconds = nil
+            entries.append(PomafocusEntry(date: endDate, state: finalState))
+            let nextUpdate = endDate.addingTimeInterval(1)
+            return DeepBreathTimeline(entries: entries, policy: .after(nextUpdate))
+        }
+
+        let nextUpdate = currentDate.addingTimeInterval(60)
+        return DeepBreathTimeline(entries: entries, policy: .after(nextUpdate))
+    }
+
+    return nil
 }
 
 // MARK: - Small Widget View

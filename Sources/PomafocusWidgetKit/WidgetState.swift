@@ -12,8 +12,8 @@ public struct WidgetTimerState: Codable {
     public var deepBreathReady: Bool
     public var deepBreathConfirmationRemainingSeconds: Int?
 
-    private static let deepBreathDuration: Int = 30
-    private static let deepBreathConfirmationWindow: Int = 60
+    public static let deepBreathDuration: Int = 30
+    public static let deepBreathConfirmationWindow: Int = 60
 
     public init(
         isRunning: Bool = false,

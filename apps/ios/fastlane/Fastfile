@@ -22,8 +22,7 @@ def config
       bundle_ids: {
         main: "#{prefix}.ios",
         widgets: "#{prefix}.ios.homewidgets",
-        activities: "#{prefix}.ios.activities",
-        shield: "#{prefix}.ios.shield"
+        activities: "#{prefix}.ios.activities"
       }
     }
   end
@@ -105,17 +104,6 @@ platform :ios do
     )
     UI.success("Registered: #{ids[:activities]}")
 
-    # Shield (Family Controls for ManagedSettings)
-    produce(
-      username: config[:apple_id],
-      app_identifier: ids[:shield],
-      app_name: "Pomafocus Shield",
-      skip_itc: true,
-      enable_services: {
-        family_controls: "on"
-      }
-    )
-    UI.success("Registered: #{ids[:shield]}")
   end
 
   desc "Associate App Group with App IDs"
@@ -189,17 +177,6 @@ platform :ios do
     )
     UI.success("Profile for activities: #{ids[:activities]}")
 
-    # Shield - needs Family Controls
-    get_provisioning_profile(
-      username: config[:apple_id],
-      app_identifier: ids[:shield],
-      development: true,
-      force: true,
-      team_id: team,
-      filename: "PomafocusShield_Development.mobileprovision",
-      output_path: "./profiles"
-    )
-    UI.success("Profile for shield: #{ids[:shield]}")
 
     # Ad-hoc profiles for OTA builds
     get_provisioning_profile(
@@ -238,27 +215,14 @@ platform :ios do
     )
     UI.success("Ad-hoc profile for activities: #{ids[:activities]}")
 
-    get_provisioning_profile(
-      username: config[:apple_id],
-      app_identifier: ids[:shield],
-      adhoc: true,
-      force: true,
-      team_id: team,
-      filename: "PomafocusShield_AdHoc.mobileprovision",
-      output_path: "./profiles",
-      provisioning_name: "#{ids[:shield]} Ad Hoc"
-    )
-    UI.success("Ad-hoc profile for shield: #{ids[:shield]}")
 
     # Install profiles
     install_provisioning_profile(path: "./profiles/Pomafocus_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusHomeWidgets_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusActivities_Development.mobileprovision")
-    install_provisioning_profile(path: "./profiles/PomafocusShield_Development.mobileprovision")
     install_provisioning_profile(path: "./profiles/Pomafocus_AdHoc.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusHomeWidgets_AdHoc.mobileprovision")
     install_provisioning_profile(path: "./profiles/PomafocusActivities_AdHoc.mobileprovision")
-    install_provisioning_profile(path: "./profiles/PomafocusShield_AdHoc.mobileprovision")
 
     UI.success("All profiles installed")
   end

@@ -6,7 +6,6 @@
 ## Build & Project Generation
 - **macOS:** open `Package.swift` in Xcode or run `swift run Pomafocus` during development. Use `./Scripts/build_app.sh` when you need a distributable `.app` bundle and always test the fresh bundle before sharing it.
 - **iOS:** the SwiftUI companion lives in `apps/ios`. Generate the Xcode project with `./Scripts/generate_ios_project.sh` (requires `brew install xcodegen`) and remember that the resulting `.xcodeproj` is disposable—regenerate it whenever the manifest changes rather than committing it.
-- **iOS temp:** `apps/ios-temp` is a disposable manual-signing sanity-check app for `getios`; it reuses the main bundle ID and will replace Pomafocus on-device.
 - Both platforms share the Swift package in `Sources/`, so rebuild both sides whenever you touch `PomafocusKit` or the sync layer.
 
 ## Coding Style

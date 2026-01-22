@@ -33,7 +33,6 @@ The workspace exposes two schemes:
 
 - **Pomafocus** – iOS app + Live Activity widget extension.
 - **PomafocusMac** – AppKit menu bar host that links against `PomafocusKit`.
-- **PomafocusTemp** – disposable iOS app for `getios` manual-signing tests (see `apps/ios-temp`).
 
 ## Signing Setup
 
@@ -106,7 +105,7 @@ If the entitlement or container is unavailable, the app drops back to NSUbiquito
 
 ## Screen Time Blocking (iOS)
 
-Only the iOS app integrates with `FamilyControls`/`ManagedSettings`. Open **Block distractions…** to choose apps, domains, or categories to shield whenever a session is active on that device. Silent CloudKit pushes keep the selector in sync, so blocking automatically starts/stops even when a session begins on macOS, but the macOS app currently does not perform local blocking.
+Screen Time blocking is currently disabled; the app no longer ships the shield extension that enforces ManagedSettings on-device.
 
 ## Live Activities (iOS)
 

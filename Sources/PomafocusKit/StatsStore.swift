@@ -35,6 +35,7 @@ public struct DailyFocusStats: Codable, Hashable {
     public let totalMinutes: Int
     public let sessionsStarted: Int
     public let sessionsCompleted: Int
+    public let sessionsStopped: Int
     public let deepBreathStarts: Int
     public let deepBreathConfirms: Int
     public let deepBreathTimeouts: Int
@@ -54,6 +55,7 @@ public struct WeeklyFocusSummary: Hashable {
     public let totalMinutes: Int
     public let sessionsStarted: Int
     public let sessionsCompleted: Int
+    public let sessionsStopped: Int
     public let completionRate: Double
     public let currentStreakDays: Int
 
@@ -61,12 +63,14 @@ public struct WeeklyFocusSummary: Hashable {
         totalMinutes: Int,
         sessionsStarted: Int,
         sessionsCompleted: Int,
+        sessionsStopped: Int,
         completionRate: Double,
         currentStreakDays: Int
     ) {
         self.totalMinutes = totalMinutes
         self.sessionsStarted = sessionsStarted
         self.sessionsCompleted = sessionsCompleted
+        self.sessionsStopped = sessionsStopped
         self.completionRate = completionRate
         self.currentStreakDays = currentStreakDays
     }
@@ -129,11 +133,13 @@ public final class StatsStore {
         let totalMinutes = rollups.reduce(0) { $0 + $1.totalMinutes }
         let sessionsStarted = rollups.reduce(0) { $0 + $1.sessionsStarted }
         let sessionsCompleted = rollups.reduce(0) { $0 + $1.sessionsCompleted }
+        let sessionsStopped = rollups.reduce(0) { $0 + $1.sessionsStopped }
         let completionRate = sessionsStarted > 0 ? Double(sessionsCompleted) / Double(sessionsStarted) : 0
         return WeeklyFocusSummary(
             totalMinutes: totalMinutes,
             sessionsStarted: sessionsStarted,
             sessionsCompleted: sessionsCompleted,
+            sessionsStopped: sessionsStopped,
             completionRate: completionRate,
             currentStreakDays: currentStreakDays(referenceDate: referenceDate)
         )
@@ -155,20 +161,31 @@ public final class StatsStore {
         return (0..<days).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: startDate) else { return nil }
             let daySummaries = buckets[date, default: []]
-            let minutes = daySummaries.reduce(0) { $0 + Int(round(Double($1.durationSeconds) / 60.0)) }
+            let minutes = daySummaries
+                .filter { $0.outcome == .completed }
+                .reduce(0) { $0 + Int(round(Double($1.durationSeconds) / 60.0)) }
             let sessionsStarted = daySummaries.count
             let sessionsCompleted = daySummaries.filter { $0.outcome == .completed }.count
+            let sessionsStopped = daySummaries.filter { $0.outcome == .stopped }.count
             let deepBreath = deepBreathStats[dayKey(for: date)] ?? DeepBreathCounts()
             return DailyFocusStats(
                 date: date,
                 totalMinutes: minutes,
                 sessionsStarted: sessionsStarted,
                 sessionsCompleted: sessionsCompleted,
+                sessionsStopped: sessionsStopped,
                 deepBreathStarts: deepBreath.starts,
                 deepBreathConfirms: deepBreath.confirms,
                 deepBreathTimeouts: deepBreath.timeouts
             )
         }
+    }
+
+    public func recentSummaries(days: Int, referenceDate: Date = Date()) -> [FocusSessionSummary] {
+        guard days > 0 else { return [] }
+        let startOfToday = calendar.startOfDay(for: referenceDate)
+        let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: startOfToday) ?? startOfToday
+        return loadSummaries().filter { $0.startedAt >= startDate }
     }
 
     public func clearAll() {

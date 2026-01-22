@@ -9,6 +9,9 @@
 - [x] Add focus presets for common session lengths.
 - [x] Add session tags and store them with stats.
 - [x] Track Deep Breath starts/confirms/timeouts and surface them in stats.
+- [x] Count focus minutes using completed sessions only.
+- [x] Track stopped sessions separately in stats.
+- [x] Add session length distribution chart.
 
 ## Backlog (Later)
 - Block attempt logging (app/site, time-of-day heatmap).

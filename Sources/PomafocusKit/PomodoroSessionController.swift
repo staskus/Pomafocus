@@ -241,7 +241,14 @@ public final class PomodoroSessionController: ObservableObject {
     private func stopSession(shouldSync: Bool, outcome: FocusSessionOutcome?) {
         if let outcome, let start = currentSessionStart {
             let end = Date()
-            let duration = max(activeDuration, Int(end.timeIntervalSince(start)))
+            let elapsed = max(0, Int(end.timeIntervalSince(start)))
+            let duration: Int
+            switch outcome {
+            case .completed:
+                duration = activeDuration > 0 ? activeDuration : elapsed
+            case .stopped:
+                duration = elapsed
+            }
             statsStore.recordSession(
                 startedAt: start,
                 endedAt: end,

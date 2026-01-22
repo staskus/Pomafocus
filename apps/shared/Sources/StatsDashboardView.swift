@@ -5,10 +5,12 @@ import PomafocusKit
 public struct StatsDashboardView: View {
     private let statsStore: StatsStore
     @State private var rollups: [DailyFocusStats] = []
+    @State private var recentSummaries: [FocusSessionSummary] = []
     @State private var weeklySummary = WeeklyFocusSummary(
         totalMinutes: 0,
         sessionsStarted: 0,
         sessionsCompleted: 0,
+        sessionsStopped: 0,
         completionRate: 0,
         currentStreakDays: 0
     )
@@ -16,6 +18,7 @@ public struct StatsDashboardView: View {
         totalMinutes: 0,
         sessionsStarted: 0,
         sessionsCompleted: 0,
+        sessionsStopped: 0,
         completionRate: 0,
         currentStreakDays: 0
     )
@@ -37,6 +40,7 @@ public struct StatsDashboardView: View {
                     streakRow
                     deepBreathRow
                     weeklyChart
+                    sessionLengthChart
                 }
                 .padding(BrutalistSpacing.md)
             }
@@ -75,6 +79,7 @@ public struct StatsDashboardView: View {
             HStack(spacing: BrutalistSpacing.md) {
                 metricPill(title: "SESSIONS", value: "\(weeklySummary.sessionsCompleted)/\(weeklySummary.sessionsStarted)")
                 metricPill(title: "COMPLETE", value: formattedPercent(weeklySummary.completionRate))
+                metricPill(title: "STOPPED", value: "\(weeklySummary.sessionsStopped)")
             }
         }
         .padding(BrutalistSpacing.lg)
@@ -144,6 +149,7 @@ public struct StatsDashboardView: View {
         weeklySummary = statsStore.weeklySummary()
         previousSummary = statsStore.weeklySummary(referenceDate: previousWeekDate)
         rollups = statsStore.dailyRollups(days: 7)
+        recentSummaries = statsStore.recentSummaries(days: 14)
     }
 
     private func metricPill(title: String, value: String) -> some View {
@@ -228,6 +234,33 @@ public struct StatsDashboardView: View {
         return "\(deepBreathConfirms)/\(deepBreathStarts) (\(rate)%)"
     }
 
+    private var sessionLengthChart: some View {
+        let buckets = sessionLengthBuckets()
+        return VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("SESSION LENGTHS")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            HStack(alignment: .bottom, spacing: BrutalistSpacing.sm) {
+                ForEach(buckets) { bucket in
+                    VStack(spacing: BrutalistSpacing.xs) {
+                        Rectangle()
+                            .fill(BrutalistColors.red)
+                            .frame(height: lengthBarHeight(for: bucket.count, in: buckets))
+                            .frame(maxWidth: .infinity)
+                        Text(bucket.label)
+                            .font(BrutalistTypography.mono)
+                            .foregroundStyle(BrutalistColors.textSecondary)
+                    }
+                }
+            }
+            .frame(height: 120)
+        }
+        .padding(BrutalistSpacing.md)
+        .modifier(BrutalistCardModifier())
+    }
+
     private var weeklyDeltaHeadline: String {
         let delta = weeklySummary.totalMinutes - previousSummary.totalMinutes
         if delta == 0 {
@@ -244,6 +277,37 @@ public struct StatsDashboardView: View {
         }
         let sign = completionDelta > 0 ? "+" : ""
         return "Completion \(sign)\(completionDelta)%"
+    }
+
+    private struct LengthBucket: Identifiable {
+        let id: String
+        let label: String
+        let count: Int
+    }
+
+    private func sessionLengthBuckets() -> [LengthBucket] {
+        let minutes = recentSummaries
+            .filter { $0.outcome == .completed }
+            .map { max(1, Int(round(Double($0.durationSeconds) / 60.0))) }
+
+        let ranges: [(String, ClosedRange<Int>)] = [
+            ("0-25", 1...25),
+            ("26-45", 26...45),
+            ("46-60", 46...60),
+            ("61-90", 61...90),
+            ("90+", 91...10_000)
+        ]
+
+        return ranges.map { label, range in
+            let count = minutes.filter { range.contains($0) }.count
+            return LengthBucket(id: label, label: label, count: count)
+        }
+    }
+
+    private func lengthBarHeight(for count: Int, in buckets: [LengthBucket]) -> CGFloat {
+        let maxCount = max(buckets.map(\.count).max() ?? 0, 1)
+        let ratio = CGFloat(count) / CGFloat(maxCount)
+        return max(8, ratio * 90)
     }
 }
 

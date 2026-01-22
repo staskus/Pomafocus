@@ -33,6 +33,7 @@ The workspace exposes two schemes:
 
 - **Pomafocus** – iOS app + Live Activity widget extension.
 - **PomafocusMac** – AppKit menu bar host that links against `PomafocusKit`.
+- **PomafocusTemp** – disposable iOS app for `getios` manual-signing tests (see `apps/ios-temp`).
 
 ## Signing Setup
 

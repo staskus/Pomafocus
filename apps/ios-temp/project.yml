@@ -1,0 +1,35 @@
+name: PomafocusTemp
+
+options:
+  deploymentTarget:
+    iOS: "18.0"
+
+schemes:
+  PomafocusTemp:
+    shared: true
+    build:
+      targets:
+        PomafocusTemp: all
+
+targets:
+  PomafocusTemp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    resources:
+      - path: ../ios/Sources/Assets.xcassets
+    settings:
+      base:
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        INFOPLIST_FILE: Sources/Info.plist
+        SWIFT_VERSION: "5.10"
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Ad Hoc"

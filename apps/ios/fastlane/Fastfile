@@ -105,15 +105,12 @@ platform :ios do
     )
     UI.success("Registered: #{ids[:activities]}")
 
-    # Shield (Family Controls for ManagedSettings)
+    # Shield (no special capabilities)
     produce(
       username: config[:apple_id],
       app_identifier: ids[:shield],
       app_name: "Pomafocus Shield",
-      skip_itc: true,
-      enable_services: {
-        family_controls: "on"
-      }
+      skip_itc: true
     )
     UI.success("Registered: #{ids[:shield]}")
   end
@@ -189,7 +186,7 @@ platform :ios do
     )
     UI.success("Profile for activities: #{ids[:activities]}")
 
-    # Shield - needs Family Controls
+    # Shield - no special entitlements
     get_provisioning_profile(
       username: config[:apple_id],
       app_identifier: ids[:shield],

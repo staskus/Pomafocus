@@ -322,21 +322,22 @@ struct AccessoryCircularView: View {
         ZStack {
             AccessoryWidgetBackground()
 
-            VStack(spacing: 2) {
-                Image(systemName: entry.state.isRunning ? "timer" : "timer")
-                    .font(.system(size: 14, weight: .bold))
+            ProgressView(value: entry.state.progress)
+                .progressViewStyle(.accessoryCircular)
+                .tint(accentRed)
 
-                Text(shortTime)
-                    .font(.system(size: 12, weight: .heavy, design: .monospaced))
+            VStack(spacing: 2) {
+                Image(systemName: iconName)
+                    .font(.system(size: 12, weight: .bold))
+                Text(entry.state.formattedDisplayRemaining)
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
             }
+            .widgetAccentable()
         }
-        .widgetAccentable()
     }
 
-    private var shortTime: String {
-        let mins = entry.state.remainingSeconds / 60
-        let secs = entry.state.remainingSeconds % 60
-        return String(format: "%d:%02d", mins, secs)
+    private var iconName: String {
+        entry.state.isDeepBreathing ? "wind" : "timer"
     }
 }
 
@@ -345,16 +346,20 @@ struct AccessoryRectangularView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "timer")
+            Image(systemName: entry.state.isDeepBreathing ? "wind" : "timer")
                 .font(.system(size: 20, weight: .bold))
                 .widgetAccentable()
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(entry.state.statusLabel)
                     .font(.system(size: 10, weight: .black))
 
                 Text(entry.state.formattedDisplayRemaining)
                     .font(.system(size: 18, weight: .heavy, design: .monospaced))
+
+                ProgressView(value: entry.state.progress)
+                    .progressViewStyle(.linear)
+                    .tint(accentRed)
             }
 
             Spacer()
@@ -367,8 +372,8 @@ struct AccessoryInlineView: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "timer")
-            Text(entry.state.isRunning ? entry.state.formattedDisplayRemaining : "Ready")
+            Image(systemName: entry.state.isDeepBreathing ? "wind" : "timer")
+            Text("\(entry.state.statusLabel) \(entry.state.formattedDisplayRemaining)")
         }
     }
 }

@@ -24,4 +24,7 @@ Select the `Pomafocus` scheme in Xcode, choose an iPhone/iPad destination (or a 
 ## Install Debugging Targets
 If OTA installs fail, use these schemes for a quick binary search:
 - `PomafocusNoExt` (app only, no extensions, full entitlements + Info.plist).
+- `PomafocusWithActivities` (app + Live Activity extension only).
+- `PomafocusWithHomeWidgets` (app + Home Widgets extension only).
+- `PomafocusWithShield` (app + Shield extension only).
 - `PomafocusMinimal` (app only, minimal Info.plist + entitlements).

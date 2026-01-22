@@ -19,6 +19,21 @@ schemes:
     build:
       targets:
         PomafocusNoExt: all
+  PomafocusWithActivities:
+    shared: true
+    build:
+      targets:
+        PomafocusWithActivities: all
+  PomafocusWithHomeWidgets:
+    shared: true
+    build:
+      targets:
+        PomafocusWithHomeWidgets: all
+  PomafocusWithShield:
+    shared: true
+    build:
+      targets:
+        PomafocusWithShield: all
   PomafocusMinimal:
     shared: true
     build:
@@ -76,6 +91,93 @@ targets:
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit
+    settings:
+      base:
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        SWIFT_VERSION: "5.10"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
+        INFOPLIST_FILE: Sources/Info.plist
+        INFOPLIST_KEY_PomafocusCloudKitContainer: iCloud.com.staskus.pomafocus
+        INFOPLIST_KEY_PomafocusCloudKitEnabled: YES
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_ENTITLEMENTS: PomafocusAdHoc.entitlements
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Ad Hoc"
+  PomafocusWithActivities:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../shared/Sources
+    dependencies:
+      - package: PomafocusRoot
+        product: PomafocusKit
+      - target: PomafocusActivities
+    settings:
+      base:
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        SWIFT_VERSION: "5.10"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
+        INFOPLIST_FILE: Sources/Info.plist
+        INFOPLIST_KEY_PomafocusCloudKitContainer: iCloud.com.staskus.pomafocus
+        INFOPLIST_KEY_PomafocusCloudKitEnabled: YES
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_ENTITLEMENTS: PomafocusAdHoc.entitlements
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Ad Hoc"
+  PomafocusWithHomeWidgets:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../shared/Sources
+    dependencies:
+      - package: PomafocusRoot
+        product: PomafocusKit
+      - target: PomafocusHomeWidgets
+    settings:
+      base:
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        PRODUCT_BUNDLE_IDENTIFIER: com.povilasstaskus.pomafocus.ios
+        SWIFT_VERSION: "5.10"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_ENTITLEMENTS: Pomafocus.entitlements
+        INFOPLIST_FILE: Sources/Info.plist
+        INFOPLIST_KEY_PomafocusCloudKitContainer: iCloud.com.staskus.pomafocus
+        INFOPLIST_KEY_PomafocusCloudKitEnabled: YES
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Distribution"
+          CODE_SIGN_ENTITLEMENTS: PomafocusAdHoc.entitlements
+          PROVISIONING_PROFILE_SPECIFIER: "com.povilasstaskus.pomafocus.ios Ad Hoc"
+  PomafocusWithShield:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../shared/Sources
+    dependencies:
+      - package: PomafocusRoot
+        product: PomafocusKit
+      - target: PomafocusShield
     settings:
       base:
         CODE_SIGN_STYLE: Manual

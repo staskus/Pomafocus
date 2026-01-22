@@ -14,6 +14,7 @@ Modern SwiftUI Pomodoro client for iOS plus a native AppKit menu bar companion o
 - A shared gradient UI, progress ring, and Screen Time selector on iOS.
 - CloudKit-backed state/preferences sync plus NSUbiquitousKeyValueStore fallback.
 - Live Activities on iPhone (Lock Screen + Dynamic Island) that continue even when the session originates on macOS.
+- Home/Lock Screen widgets with quick start/stop (opens the app to run the action).
 - Menu bar time indicator plus a global `⌘⌃P` hotkey on macOS.
 - Optional "Deep Breath" safety toggle that forces a 30-second pause before manual stops, followed by a 60-second confirmation window; synced between devices.
 - Screen Time-based app/site blocking on iOS (per-device selections) that follow remote sessions via silent push.

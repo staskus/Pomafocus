@@ -322,7 +322,7 @@ struct AccessoryCircularView: View {
         ZStack {
             AccessoryWidgetBackground()
 
-            Gauge(value: entry.state.progress) {
+            Gauge(value: entry.state.progress, in: 0...1) {
                 EmptyView()
             } currentValueLabel: {
                 EmptyView()
@@ -349,24 +349,28 @@ struct AccessoryRectangularView: View {
     let entry: PomafocusEntry
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: entry.state.isDeepBreathing ? "wind" : "timer")
-                .font(.system(size: 20, weight: .bold))
-                .widgetAccentable()
+        ZStack {
+            AccessoryWidgetBackground()
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.state.statusLabel)
-                    .font(.system(size: 10, weight: .black))
+            HStack(spacing: 8) {
+                Image(systemName: entry.state.isDeepBreathing ? "wind" : "timer")
+                    .font(.system(size: 20, weight: .bold))
+                    .widgetAccentable()
 
-                Text(entry.state.formattedDisplayRemaining)
-                    .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.state.statusLabel)
+                        .font(.system(size: 10, weight: .black))
 
-                ProgressView(value: entry.state.progress)
-                    .progressViewStyle(.linear)
-                    .tint(accentRed)
+                    Text(entry.state.formattedDisplayRemaining)
+                        .font(.system(size: 18, weight: .heavy, design: .monospaced))
+
+                    ProgressView(value: entry.state.progress)
+                        .progressViewStyle(.linear)
+                        .tint(accentRed)
+                }
+
+                Spacer()
             }
-
-            Spacer()
         }
     }
 }
@@ -432,6 +436,7 @@ struct PomafocusLockScreenWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PomafocusTimelineProvider()) { entry in
             AccessoryCircularView(entry: entry)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Focus Timer")
         .description("Quick glance at your focus timer.")
@@ -445,6 +450,7 @@ struct PomafocusLockScreenRectWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PomafocusTimelineProvider()) { entry in
             AccessoryRectangularView(entry: entry)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Focus Timer")
         .description("Focus timer with status.")
@@ -458,6 +464,7 @@ struct PomafocusLockScreenInlineWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PomafocusTimelineProvider()) { entry in
             AccessoryInlineView(entry: entry)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Focus Timer")
         .description("Inline focus timer status.")

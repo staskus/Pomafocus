@@ -89,17 +89,21 @@ public struct WidgetTimerState: Codable {
     }
 
     public var progress: Double {
+        let rawValue: Double
         if isDeepBreathing {
             if deepBreathReady, let remaining = deepBreathConfirmationRemainingSeconds {
-                return progressValue(remaining: remaining, total: Self.deepBreathConfirmationWindow)
+                rawValue = progressValue(remaining: remaining, total: Self.deepBreathConfirmationWindow)
+            } else if let remaining = deepBreathRemainingSeconds {
+                rawValue = progressValue(remaining: remaining, total: Self.deepBreathDuration)
+            } else {
+                rawValue = 0
             }
-            if let remaining = deepBreathRemainingSeconds {
-                return progressValue(remaining: remaining, total: Self.deepBreathDuration)
-            }
+        } else {
+            let total = max(durationSeconds, 1)
+            let elapsed = total - remainingSeconds
+            rawValue = Double(elapsed) / Double(total)
         }
-        let total = max(durationSeconds, 1)
-        let elapsed = total - remainingSeconds
-        return Double(elapsed) / Double(total)
+        return min(max(rawValue, 0), 1)
     }
 
     public var statusLabel: String {

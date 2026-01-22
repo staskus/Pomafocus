@@ -27,4 +27,5 @@ If OTA installs fail, use these schemes for a quick binary search:
 - `PomafocusWithActivities` (app + Live Activity extension only).
 - `PomafocusWithHomeWidgets` (app + Home Widgets extension only).
 - `PomafocusWithShield` (app + Shield extension only).
+- `PomafocusNoShield` (app + activities + home widgets, no shield).
 - `PomafocusMinimal` (app only, minimal Info.plist + entitlements).

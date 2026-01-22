@@ -10,6 +10,27 @@ struct PomafocusiOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(session: core.session)
+                .onOpenURL { url in
+                    handleWidgetURL(url)
+                }
+        }
+    }
+
+    private func handleWidgetURL(_ url: URL) {
+        guard url.scheme == "pomafocus" else { return }
+        switch url.host {
+        case "start":
+            if !core.session.isRunning {
+                core.session.toggleTimer()
+            }
+        case "stop":
+            if core.session.isRunning {
+                core.session.toggleTimer()
+            }
+        case "toggle":
+            core.session.toggleTimer()
+        default:
+            break
         }
     }
 }

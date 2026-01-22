@@ -10,6 +10,11 @@ private let accentYellow = Color(red: 1.0, green: 0.82, blue: 0.20)
 private let darkBackground = Color(white: 0.08)
 private let surfaceColor = Color(white: 0.12)
 
+private func widgetActionURL(for state: WidgetTimerState) -> URL {
+    let action = state.isRunning ? "stop" : "start"
+    return URL(string: "pomafocus://\(action)")!
+}
+
 // MARK: - App Intents
 
 struct ToggleTimerIntent: AppIntent {
@@ -269,7 +274,7 @@ struct SmallWidgetView: View {
                 Spacer()
 
                 // Action button
-                Button(intent: ToggleTimerIntent()) {
+                Link(destination: widgetActionURL(for: entry.state)) {
                     Text(entry.state.actionLabel)
                         .font(.system(size: 12, weight: .black))
                         .tracking(1)
@@ -278,7 +283,6 @@ struct SmallWidgetView: View {
                         .padding(.vertical, 8)
                         .background(entry.state.isRunning ? Color.white.opacity(0.15) : accentRed)
                 }
-                .buttonStyle(.plain)
             }
             .padding(12)
         }
@@ -336,7 +340,7 @@ struct MediumWidgetView: View {
                 VStack {
                     Spacer()
 
-                    Button(intent: ToggleTimerIntent()) {
+                    Link(destination: widgetActionURL(for: entry.state)) {
                         VStack(spacing: 4) {
                             Image(systemName: entry.state.isRunning ? "stop.fill" : "play.fill")
                                 .font(.system(size: 24, weight: .bold))
@@ -348,7 +352,6 @@ struct MediumWidgetView: View {
                         .frame(width: 64, height: 64)
                         .background(entry.state.isRunning ? Color.white.opacity(0.15) : accentRed)
                     }
-                    .buttonStyle(.plain)
 
                     Spacer()
                 }
@@ -417,7 +420,7 @@ struct LargeWidgetView: View {
                 Spacer()
 
                 // Action button
-                Button(intent: ToggleTimerIntent()) {
+                Link(destination: widgetActionURL(for: entry.state)) {
                     HStack {
                         Image(systemName: entry.state.isRunning ? "stop.fill" : "play.fill")
                             .font(.system(size: 20, weight: .bold))
@@ -430,7 +433,6 @@ struct LargeWidgetView: View {
                     .padding(.vertical, 16)
                     .background(entry.state.isRunning ? Color.white.opacity(0.15) : accentRed)
                 }
-                .buttonStyle(.plain)
             }
             .padding(20)
         }

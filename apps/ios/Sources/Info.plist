@@ -19,6 +19,17 @@
 	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.povilasstaskus.pomafocus.ios</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pomafocus</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

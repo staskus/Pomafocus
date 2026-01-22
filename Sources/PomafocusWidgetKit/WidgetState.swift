@@ -208,9 +208,9 @@ public final class WidgetStateManager: Sendable {
             return nil
         }
 
-        // Only consume commands less than 5 seconds old
+        // Allow enough time for cold app launches to receive widget commands.
         let age = Date().timeIntervalSince1970 - timestamp
-        guard age < 5 else {
+        guard age < 30 else {
             defaults.removeObject(forKey: Self.commandKey)
             defaults.removeObject(forKey: Self.commandKey + ".timestamp")
             return nil

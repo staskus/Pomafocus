@@ -20,3 +20,8 @@ Select the `Pomafocus` scheme in Xcode, choose an iPhone/iPad destination (or a 
 - For OTA installs with `getios`, use manual signing and an ad-hoc export method (for example: `getios build --manual-signing --export-method ad-hoc`).
 - If `Pomafocus.entitlements` includes Family Controls, ensure Fastlane enables the `family_controls` capability on the main App ID before generating profiles.
 - Ad-hoc profiles do not support the Family Controls entitlement, so Release builds use `PomafocusAdHoc.entitlements` (without Family Controls). Use Debug + development signing when you need that capability.
+
+## Install Debugging Targets
+If OTA installs fail, use these schemes for a quick binary search:
+- `PomafocusNoExt` (app only, no extensions, full entitlements + Info.plist).
+- `PomafocusMinimal` (app only, minimal Info.plist + entitlements).

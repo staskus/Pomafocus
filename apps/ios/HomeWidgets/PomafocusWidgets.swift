@@ -15,6 +15,7 @@ private let surfaceColor = Color(white: 0.12)
 struct ToggleTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Toggle Focus Timer"
     static var description = IntentDescription("Start or stop the focus timer")
+    static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
         let state = WidgetStateManager.shared.loadState()
@@ -23,6 +24,7 @@ struct ToggleTimerIntent: AppIntent {
         } else {
             WidgetStateManager.shared.saveCommand(.start)
         }
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }
@@ -30,9 +32,11 @@ struct ToggleTimerIntent: AppIntent {
 struct StartTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Start Focus"
     static var description = IntentDescription("Start a focus session")
+    static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
         WidgetStateManager.shared.saveCommand(.start)
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }
@@ -40,9 +44,11 @@ struct StartTimerIntent: AppIntent {
 struct StopTimerIntent: AppIntent {
     static var title: LocalizedStringResource = "Stop Focus"
     static var description = IntentDescription("Stop the current focus session")
+    static var openAppWhenRun: Bool = true
 
     func perform() async throws -> some IntentResult {
         WidgetStateManager.shared.saveCommand(.stop)
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }

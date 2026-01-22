@@ -105,7 +105,7 @@ If the entitlement or container is unavailable, the app drops back to NSUbiquito
 
 ## Screen Time Blocking (iOS)
 
-Screen Time blocking is currently disabled; the app no longer ships the shield extension that enforces ManagedSettings on-device.
+Screen Time blocking still works, but the custom shield UI is unavailable without the shield extension.
 
 ## Live Activities (iOS)
 

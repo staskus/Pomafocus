@@ -322,9 +322,13 @@ struct AccessoryCircularView: View {
         ZStack {
             AccessoryWidgetBackground()
 
-            ProgressView(value: entry.state.progress)
-                .progressViewStyle(.accessoryCircular)
-                .tint(accentRed)
+            Gauge(value: entry.state.progress) {
+                EmptyView()
+            } currentValueLabel: {
+                EmptyView()
+            }
+            .gaugeStyle(.accessoryCircular)
+            .tint(accentRed)
 
             VStack(spacing: 2) {
                 Image(systemName: iconName)

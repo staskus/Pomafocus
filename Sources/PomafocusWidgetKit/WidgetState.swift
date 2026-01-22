@@ -7,6 +7,13 @@ public struct WidgetTimerState: Codable {
     public var startedAt: Date?
     public var endsAt: Date?
     public var minutes: Int
+    public var deepBreathEnabled: Bool
+    public var deepBreathRemainingSeconds: Int?
+    public var deepBreathReady: Bool
+    public var deepBreathConfirmationRemainingSeconds: Int?
+
+    private static let deepBreathDuration: Int = 30
+    private static let deepBreathConfirmationWindow: Int = 60
 
     public init(
         isRunning: Bool = false,
@@ -14,7 +21,11 @@ public struct WidgetTimerState: Codable {
         durationSeconds: Int = 1500,
         startedAt: Date? = nil,
         endsAt: Date? = nil,
-        minutes: Int = 25
+        minutes: Int = 25,
+        deepBreathEnabled: Bool = false,
+        deepBreathRemainingSeconds: Int? = nil,
+        deepBreathReady: Bool = false,
+        deepBreathConfirmationRemainingSeconds: Int? = nil
     ) {
         self.isRunning = isRunning
         self.remainingSeconds = remainingSeconds
@@ -22,19 +33,128 @@ public struct WidgetTimerState: Codable {
         self.startedAt = startedAt
         self.endsAt = endsAt
         self.minutes = minutes
+        self.deepBreathEnabled = deepBreathEnabled
+        self.deepBreathRemainingSeconds = deepBreathRemainingSeconds
+        self.deepBreathReady = deepBreathReady
+        self.deepBreathConfirmationRemainingSeconds = deepBreathConfirmationRemainingSeconds
     }
 
-    public var formattedRemaining: String {
-        let seconds = max(0, remainingSeconds)
-        let mins = seconds / 60
-        let secs = seconds % 60
-        return String(format: "%02d:%02d", mins, secs)
+    private enum CodingKeys: String, CodingKey {
+        case isRunning
+        case remainingSeconds
+        case durationSeconds
+        case startedAt
+        case endsAt
+        case minutes
+        case deepBreathEnabled
+        case deepBreathRemainingSeconds
+        case deepBreathReady
+        case deepBreathConfirmationRemainingSeconds
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        isRunning = try container.decode(Bool.self, forKey: .isRunning)
+        remainingSeconds = try container.decode(Int.self, forKey: .remainingSeconds)
+        durationSeconds = try container.decode(Int.self, forKey: .durationSeconds)
+        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt)
+        endsAt = try container.decodeIfPresent(Date.self, forKey: .endsAt)
+        minutes = try container.decode(Int.self, forKey: .minutes)
+        deepBreathEnabled = try container.decodeIfPresent(Bool.self, forKey: .deepBreathEnabled) ?? false
+        deepBreathRemainingSeconds = try container.decodeIfPresent(Int.self, forKey: .deepBreathRemainingSeconds)
+        deepBreathReady = try container.decodeIfPresent(Bool.self, forKey: .deepBreathReady) ?? false
+        deepBreathConfirmationRemainingSeconds = try container.decodeIfPresent(Int.self, forKey: .deepBreathConfirmationRemainingSeconds)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(isRunning, forKey: .isRunning)
+        try container.encode(remainingSeconds, forKey: .remainingSeconds)
+        try container.encode(durationSeconds, forKey: .durationSeconds)
+        try container.encodeIfPresent(startedAt, forKey: .startedAt)
+        try container.encodeIfPresent(endsAt, forKey: .endsAt)
+        try container.encode(minutes, forKey: .minutes)
+        try container.encode(deepBreathEnabled, forKey: .deepBreathEnabled)
+        try container.encodeIfPresent(deepBreathRemainingSeconds, forKey: .deepBreathRemainingSeconds)
+        try container.encode(deepBreathReady, forKey: .deepBreathReady)
+        try container.encodeIfPresent(deepBreathConfirmationRemainingSeconds, forKey: .deepBreathConfirmationRemainingSeconds)
+    }
+
+    public var isDeepBreathing: Bool {
+        deepBreathRemainingSeconds != nil || deepBreathReady
+    }
+
+    public var formattedDisplayRemaining: String {
+        formattedSeconds(displayRemainingSeconds)
     }
 
     public var progress: Double {
+        if isDeepBreathing {
+            if deepBreathReady, let remaining = deepBreathConfirmationRemainingSeconds {
+                return progressValue(remaining: remaining, total: Self.deepBreathConfirmationWindow)
+            }
+            if let remaining = deepBreathRemainingSeconds {
+                return progressValue(remaining: remaining, total: Self.deepBreathDuration)
+            }
+        }
         let total = max(durationSeconds, 1)
         let elapsed = total - remainingSeconds
         return Double(elapsed) / Double(total)
+    }
+
+    public var statusLabel: String {
+        if isDeepBreathing {
+            return deepBreathReady ? "CONFIRM" : "BREATHE"
+        }
+        return isRunning ? "FOCUS" : "READY"
+    }
+
+    public var actionLabel: String {
+        if isRunning {
+            if isDeepBreathing {
+                return deepBreathReady ? "CONFIRM" : "BREATHE"
+            }
+            return deepBreathEnabled ? "STOP" : "STOP"
+        }
+        return "START"
+    }
+
+    public func normalized(for date: Date) -> WidgetTimerState {
+        guard isRunning, let endsAt, endsAt <= date else {
+            return self
+        }
+        var updated = self
+        updated.isRunning = false
+        updated.remainingSeconds = 0
+        updated.startedAt = nil
+        updated.endsAt = nil
+        updated.deepBreathRemainingSeconds = nil
+        updated.deepBreathReady = false
+        updated.deepBreathConfirmationRemainingSeconds = nil
+        return updated
+    }
+
+    private var displayRemainingSeconds: Int {
+        if deepBreathReady, let remaining = deepBreathConfirmationRemainingSeconds {
+            return remaining
+        }
+        if let remaining = deepBreathRemainingSeconds {
+            return remaining
+        }
+        return remainingSeconds
+    }
+
+    private func formattedSeconds(_ seconds: Int) -> String {
+        let clamped = max(0, seconds)
+        let mins = clamped / 60
+        let secs = clamped % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+
+    private func progressValue(remaining: Int, total: Int) -> Double {
+        let clampedTotal = max(total, 1)
+        let elapsed = clampedTotal - max(0, remaining)
+        return Double(elapsed) / Double(clampedTotal)
     }
 }
 

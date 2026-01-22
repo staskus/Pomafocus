@@ -62,10 +62,11 @@ struct PomafocusTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<PomafocusEntry>) -> Void) {
         let state = WidgetStateManager.shared.loadState()
         let currentDate = Date()
+        let normalizedState = state.normalized(for: currentDate)
 
         var entries: [PomafocusEntry] = []
 
-        if state.isRunning, let endsAt = state.endsAt {
+        if normalizedState.isRunning, let endsAt = normalizedState.endsAt {
             // Generate entries for each second while running
             let remainingTime = max(0, Int(endsAt.timeIntervalSince(currentDate)))
             let entryCount = min(remainingTime, 60) // Max 60 entries
@@ -73,18 +74,31 @@ struct PomafocusTimelineProvider: TimelineProvider {
             for offset in 0..<entryCount {
                 let entryDate = currentDate.addingTimeInterval(TimeInterval(offset))
                 let remaining = remainingTime - offset
-                var entryState = state
+                var entryState = normalizedState
                 entryState.remainingSeconds = remaining
                 entries.append(PomafocusEntry(date: entryDate, state: entryState))
             }
 
-            // Schedule next timeline update
-            let nextUpdate = currentDate.addingTimeInterval(60)
-            let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
-            completion(timeline)
+            if remainingTime <= 60 {
+                var finalState = normalizedState
+                finalState.isRunning = false
+                finalState.remainingSeconds = 0
+                finalState.startedAt = nil
+                finalState.endsAt = nil
+                finalState.deepBreathRemainingSeconds = nil
+                finalState.deepBreathReady = false
+                finalState.deepBreathConfirmationRemainingSeconds = nil
+                entries.append(PomafocusEntry(date: endsAt, state: finalState))
+                let nextUpdate = endsAt.addingTimeInterval(900)
+                completion(Timeline(entries: entries, policy: .after(nextUpdate)))
+            } else {
+                // Schedule next timeline update
+                let nextUpdate = currentDate.addingTimeInterval(60)
+                completion(Timeline(entries: entries, policy: .after(nextUpdate)))
+            }
         } else {
             // Not running - single entry, refresh in 15 minutes
-            entries.append(PomafocusEntry(date: currentDate, state: state))
+            entries.append(PomafocusEntry(date: currentDate, state: normalizedState))
             let nextUpdate = currentDate.addingTimeInterval(900)
             let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
             completion(timeline)
@@ -113,7 +127,7 @@ struct SmallWidgetView: View {
                         .fill(entry.state.isRunning ? accentRed : Color.white.opacity(0.3))
                         .frame(width: 8, height: 8)
 
-                    Text(entry.state.isRunning ? "FOCUS" : "READY")
+                    Text(entry.state.statusLabel)
                         .font(.system(size: 10, weight: .black))
                         .tracking(1)
                         .foregroundStyle(entry.state.isRunning ? accentYellow : .white.opacity(0.6))
@@ -124,7 +138,7 @@ struct SmallWidgetView: View {
                 Spacer()
 
                 // Timer display
-                Text(entry.state.formattedRemaining)
+                Text(entry.state.formattedDisplayRemaining)
                     .font(.system(size: 32, weight: .heavy, design: .monospaced))
                     .foregroundStyle(.white)
 
@@ -132,7 +146,7 @@ struct SmallWidgetView: View {
 
                 // Action button
                 Button(intent: ToggleTimerIntent()) {
-                    Text(entry.state.isRunning ? "STOP" : "START")
+                    Text(entry.state.actionLabel)
                         .font(.system(size: 12, weight: .black))
                         .tracking(1)
                         .foregroundStyle(entry.state.isRunning ? .white : .black)
@@ -168,7 +182,7 @@ struct MediumWidgetView: View {
 
                         Spacer()
 
-                        Text(entry.state.isRunning ? "ACTIVE" : "READY")
+                        Text(entry.state.statusLabel)
                             .font(.system(size: 9, weight: .bold, design: .monospaced))
                             .foregroundStyle(entry.state.isRunning ? .black : .white)
                             .padding(.horizontal, 6)
@@ -177,7 +191,7 @@ struct MediumWidgetView: View {
                     }
 
                     // Timer
-                    Text(entry.state.formattedRemaining)
+                    Text(entry.state.formattedDisplayRemaining)
                         .font(.system(size: 40, weight: .heavy, design: .monospaced))
                         .foregroundStyle(.white)
 
@@ -202,7 +216,7 @@ struct MediumWidgetView: View {
                         VStack(spacing: 4) {
                             Image(systemName: entry.state.isRunning ? "stop.fill" : "play.fill")
                                 .font(.system(size: 24, weight: .bold))
-                            Text(entry.state.isRunning ? "STOP" : "START")
+                            Text(entry.state.actionLabel)
                                 .font(.system(size: 10, weight: .black))
                                 .tracking(1)
                         }
@@ -243,7 +257,7 @@ struct LargeWidgetView: View {
 
                     Spacer()
 
-                    Text(entry.state.isRunning ? "ACTIVE" : "READY")
+                    Text(entry.state.statusLabel)
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundStyle(entry.state.isRunning ? .black : .white)
                         .padding(.horizontal, 8)
@@ -254,7 +268,7 @@ struct LargeWidgetView: View {
                 Spacer()
 
                 // Large timer display
-                Text(entry.state.formattedRemaining)
+                Text(entry.state.formattedDisplayRemaining)
                     .font(.system(size: 72, weight: .heavy, design: .monospaced))
                     .foregroundStyle(.white)
 
@@ -283,7 +297,7 @@ struct LargeWidgetView: View {
                     HStack {
                         Image(systemName: entry.state.isRunning ? "stop.fill" : "play.fill")
                             .font(.system(size: 20, weight: .bold))
-                        Text(entry.state.isRunning ? "STOP SESSION" : "START SESSION")
+                        Text(entry.state.isRunning ? (entry.state.isDeepBreathing ? entry.state.actionLabel : "STOP SESSION") : "START SESSION")
                             .font(.system(size: 14, weight: .black))
                             .tracking(1)
                     }
@@ -336,10 +350,10 @@ struct AccessoryRectangularView: View {
                 .widgetAccentable()
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.state.isRunning ? "FOCUS" : "READY")
+                Text(entry.state.statusLabel)
                     .font(.system(size: 10, weight: .black))
 
-                Text(entry.state.formattedRemaining)
+                Text(entry.state.formattedDisplayRemaining)
                     .font(.system(size: 18, weight: .heavy, design: .monospaced))
             }
 
@@ -354,7 +368,7 @@ struct AccessoryInlineView: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "timer")
-            Text(entry.state.isRunning ? entry.state.formattedRemaining : "Ready")
+            Text(entry.state.isRunning ? entry.state.formattedDisplayRemaining : "Ready")
         }
     }
 }

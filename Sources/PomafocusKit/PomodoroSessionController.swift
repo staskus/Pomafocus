@@ -169,31 +169,37 @@ public final class PomodoroSessionController: ObservableObject {
     private func configureDeepBreathTimers() {
         deepBreathTimer.onTick = { [weak self] remaining in
             self?.deepBreathRemaining = remaining
+            self?.publishWidgetState()
         }
         deepBreathTimer.onCompletion = { [weak self] in
             guard let self else { return }
             self.deepBreathRemaining = nil
             self.beginDeepBreathConfirmation()
+            self.publishWidgetState()
         }
         deepBreathTimer.onStateChange = { [weak self] running in
             guard let self else { return }
             if !running && !self.deepBreathReady {
                 self.deepBreathRemaining = nil
+                self.publishWidgetState()
             }
         }
 
         deepBreathConfirmTimer.onTick = { [weak self] remaining in
             self?.deepBreathConfirmationRemaining = remaining
+            self?.publishWidgetState()
         }
         deepBreathConfirmTimer.onCompletion = { [weak self] in
             guard let self else { return }
             self.deepBreathReady = false
             self.deepBreathConfirmationRemaining = nil
+            self.publishWidgetState()
         }
         deepBreathConfirmTimer.onStateChange = { [weak self] running in
             guard let self else { return }
             if !running {
                 self.deepBreathConfirmationRemaining = nil
+                self.publishWidgetState()
             }
         }
     }
@@ -296,10 +302,7 @@ public final class PomodoroSessionController: ObservableObject {
                 startSession(durationSeconds: minutes * 60, startDate: Date(), shouldSync: true)
             }
         case .stop:
-            if isRunning {
-                resetDeepBreath()
-                stopSession(shouldSync: true)
-            }
+            handleStopRequest()
         }
     }
 
@@ -311,7 +314,11 @@ public final class PomodoroSessionController: ObservableObject {
             durationSeconds: currentDurationSeconds,
             startedAt: currentSessionStart,
             endsAt: endsAt,
-            minutes: minutes
+            minutes: minutes,
+            deepBreathEnabled: deepBreathEnabled,
+            deepBreathRemainingSeconds: deepBreathRemaining.map { max(0, Int($0)) },
+            deepBreathReady: deepBreathReady,
+            deepBreathConfirmationRemainingSeconds: deepBreathConfirmationRemaining.map { max(0, Int($0)) }
         )
         widgetStateManager.saveState(state)
         reloadWidgets()

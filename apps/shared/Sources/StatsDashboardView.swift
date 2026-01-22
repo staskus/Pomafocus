@@ -12,6 +12,13 @@ public struct StatsDashboardView: View {
         completionRate: 0,
         currentStreakDays: 0
     )
+    @State private var previousSummary = WeeklyFocusSummary(
+        totalMinutes: 0,
+        sessionsStarted: 0,
+        sessionsCompleted: 0,
+        completionRate: 0,
+        currentStreakDays: 0
+    )
 
     public init(statsStore: StatsStore = .shared) {
         self.statsStore = statsStore
@@ -26,7 +33,9 @@ public struct StatsDashboardView: View {
                 VStack(spacing: BrutalistSpacing.lg) {
                     header
                     weeklyHero
+                    weeklyDeltaCard
                     streakRow
+                    deepBreathRow
                     weeklyChart
                 }
                 .padding(BrutalistSpacing.md)
@@ -105,8 +114,35 @@ public struct StatsDashboardView: View {
         .modifier(BrutalistCardModifier())
     }
 
+    private var weeklyDeltaCard: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("WEEKLY RECAP")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            Text(weeklyDeltaHeadline)
+                .font(BrutalistTypography.headline)
+                .foregroundStyle(BrutalistColors.textPrimary)
+
+            Text(weeklyDeltaSubhead)
+                .font(BrutalistTypography.body)
+                .foregroundStyle(BrutalistColors.textSecondary)
+        }
+        .padding(BrutalistSpacing.md)
+        .modifier(BrutalistCardModifier())
+    }
+
+    private var deepBreathRow: some View {
+        HStack(spacing: BrutalistSpacing.md) {
+            statCard(title: "DEEP BREATH", value: deepBreathSummaryText)
+            statCard(title: "TIMEOUTS", value: "\(deepBreathTimeouts) TOTAL")
+        }
+    }
+
     private func refreshStats() {
         weeklySummary = statsStore.weeklySummary()
+        previousSummary = statsStore.weeklySummary(referenceDate: previousWeekDate)
         rollups = statsStore.dailyRollups(days: 7)
     }
 
@@ -166,6 +202,48 @@ public struct StatsDashboardView: View {
     private var weeklyAverageText: String {
         let average = rollups.isEmpty ? 0 : weeklySummary.totalMinutes / max(rollups.count, 1)
         return "\(average) MIN"
+    }
+
+    private var previousWeekDate: Date {
+        Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+    }
+
+    private var deepBreathStarts: Int {
+        rollups.reduce(0) { $0 + $1.deepBreathStarts }
+    }
+
+    private var deepBreathConfirms: Int {
+        rollups.reduce(0) { $0 + $1.deepBreathConfirms }
+    }
+
+    private var deepBreathTimeouts: Int {
+        rollups.reduce(0) { $0 + $1.deepBreathTimeouts }
+    }
+
+    private var deepBreathSummaryText: String {
+        if deepBreathStarts == 0 {
+            return "NO USE"
+        }
+        let rate = Int(round(Double(deepBreathConfirms) / Double(max(deepBreathStarts, 1)) * 100))
+        return "\(deepBreathConfirms)/\(deepBreathStarts) (\(rate)%)"
+    }
+
+    private var weeklyDeltaHeadline: String {
+        let delta = weeklySummary.totalMinutes - previousSummary.totalMinutes
+        if delta == 0 {
+            return "Same as last week"
+        }
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(delta) MIN VS LAST WEEK"
+    }
+
+    private var weeklyDeltaSubhead: String {
+        let completionDelta = Int(round((weeklySummary.completionRate - previousSummary.completionRate) * 100))
+        if completionDelta == 0 {
+            return "Completion rate steady"
+        }
+        let sign = completionDelta > 0 ? "+" : ""
+        return "Completion \(sign)\(completionDelta)%"
     }
 }
 

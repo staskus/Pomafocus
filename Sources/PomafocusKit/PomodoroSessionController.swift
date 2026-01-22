@@ -15,6 +15,7 @@ public final class PomodoroSessionController: ObservableObject {
     @Published public private(set) var deepBreathRemaining: TimeInterval?
     @Published public private(set) var deepBreathReady: Bool = false
     @Published public private(set) var deepBreathConfirmationRemaining: TimeInterval?
+    @Published public private(set) var sessionTag: String?
 
     public var remainingDisplay: String {
         PomodoroSessionController.format(seconds: Int(ceil(remaining)))
@@ -116,6 +117,11 @@ public final class PomodoroSessionController: ObservableObject {
         syncManager.publishPreferences(minutes: minutes, deepBreathEnabled: deepBreathEnabled)
     }
 
+    public func setSessionTag(_ tag: String?) {
+        guard !isRunning else { return }
+        sessionTag = tag
+    }
+
     public func setDeepBreathEnabled(_ enabled: Bool) {
         deepBreathEnabled = enabled
         if !enabled {
@@ -196,6 +202,7 @@ public final class PomodoroSessionController: ObservableObject {
             guard let self else { return }
             self.deepBreathReady = false
             self.deepBreathConfirmationRemaining = nil
+            self.statsStore.recordDeepBreathEvent(.timedOut)
             self.publishWidgetState()
         }
         deepBreathConfirmTimer.onStateChange = { [weak self] running in
@@ -239,7 +246,8 @@ public final class PomodoroSessionController: ObservableObject {
                 startedAt: start,
                 endedAt: end,
                 durationSeconds: duration,
-                outcome: outcome
+                outcome: outcome,
+                tag: sessionTag
             )
         }
         resetDeepBreath()
@@ -260,6 +268,7 @@ public final class PomodoroSessionController: ObservableObject {
         guard isRunning else { return }
         if deepBreathEnabled {
             if deepBreathReady {
+                statsStore.recordDeepBreathEvent(.confirmed)
                 resetDeepBreath()
                 stopSession(shouldSync: true, outcome: .stopped)
             } else if deepBreathRemaining == nil {
@@ -274,6 +283,7 @@ public final class PomodoroSessionController: ObservableObject {
         deepBreathConfirmTimer.stop()
         deepBreathReady = false
         deepBreathRemaining = PomodoroSessionController.deepBreathDuration
+        statsStore.recordDeepBreathEvent(.started)
         deepBreathTimer.start(duration: PomodoroSessionController.deepBreathDuration, startDate: deepBreathClock())
     }
 

@@ -154,7 +154,11 @@ public struct PomodoroDashboardView: View {
 
     private var controlsSection: some View {
         VStack(spacing: BrutalistSpacing.md) {
+            tagPicker
+            Divider()
+                .background(BrutalistColors.border)
             sessionLengthControl
+            presetsRow
             Divider()
                 .background(BrutalistColors.border)
             PlatformBlockingPanel(isDisabled: settingsLocked)
@@ -196,6 +200,80 @@ public struct PomodoroDashboardView: View {
             )
             .tint(BrutalistColors.red)
             .disabled(settingsLocked)
+        }
+    }
+
+    private var tagPicker: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("SESSION TAG")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: BrutalistSpacing.sm) {
+                    ForEach(sessionTags, id: \.self) { tag in
+                        Button {
+                            let nextTag = session.sessionTag == tag ? nil : tag
+                            session.setSessionTag(nextTag)
+                        } label: {
+                            Text(tag)
+                                .font(BrutalistTypography.caption)
+                                .foregroundStyle(session.sessionTag == tag ? BrutalistColors.textOnColor : BrutalistColors.textPrimary)
+                                .tracking(1)
+                                .padding(.vertical, BrutalistSpacing.xs)
+                                .padding(.horizontal, BrutalistSpacing.sm)
+                                .background(session.sessionTag == tag ? BrutalistColors.red : BrutalistColors.surfaceSecondary)
+                                .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: BrutalistRadius.sm)
+                                        .stroke(BrutalistColors.border, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(settingsLocked)
+                        .opacity(settingsLocked ? 0.6 : 1.0)
+                    }
+                }
+            }
+        }
+    }
+
+    private var presetsRow: some View {
+        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
+            Text("FOCUS PRESETS")
+                .font(BrutalistTypography.caption)
+                .foregroundStyle(BrutalistColors.textSecondary)
+                .tracking(1)
+
+            HStack(spacing: BrutalistSpacing.sm) {
+                ForEach(presets, id: \.label) { preset in
+                    Button {
+                        session.setMinutes(preset.minutes)
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(preset.label)
+                                .font(BrutalistTypography.caption)
+                                .foregroundStyle(BrutalistColors.textSecondary)
+                                .tracking(1)
+                            Text("\(preset.minutes) MIN")
+                                .font(BrutalistTypography.headline)
+                                .foregroundStyle(BrutalistColors.textPrimary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, BrutalistSpacing.sm)
+                        .background(BrutalistColors.surfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BrutalistRadius.sm)
+                                .stroke(BrutalistColors.border, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(settingsLocked)
+                    .opacity(settingsLocked ? 0.6 : 1.0)
+                }
+            }
         }
     }
 
@@ -269,4 +347,21 @@ public struct PomodoroDashboardView: View {
     private var settingsLocked: Bool {
         session.isRunning
     }
+
+    private var presets: [Preset] {
+        [
+            Preset(label: "SPRINT", minutes: 25),
+            Preset(label: "FLOW", minutes: 50),
+            Preset(label: "DEEP", minutes: 90)
+        ]
+    }
+
+    private var sessionTags: [String] {
+        ["DEEP WORK", "ADMIN", "STUDY", "WRITING", "DESIGN"]
+    }
+}
+
+private struct Preset: Hashable {
+    let label: String
+    let minutes: Int
 }

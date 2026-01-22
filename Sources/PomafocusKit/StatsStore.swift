@@ -11,19 +11,22 @@ public struct FocusSessionSummary: Codable, Identifiable, Hashable {
     public let endedAt: Date
     public let durationSeconds: Int
     public let outcome: FocusSessionOutcome
+    public let tag: String?
 
     public init(
         id: UUID = UUID(),
         startedAt: Date,
         endedAt: Date,
         durationSeconds: Int,
-        outcome: FocusSessionOutcome
+        outcome: FocusSessionOutcome,
+        tag: String? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.durationSeconds = durationSeconds
         self.outcome = outcome
+        self.tag = tag
     }
 }
 
@@ -32,10 +35,18 @@ public struct DailyFocusStats: Codable, Hashable {
     public let totalMinutes: Int
     public let sessionsStarted: Int
     public let sessionsCompleted: Int
+    public let deepBreathStarts: Int
+    public let deepBreathConfirms: Int
+    public let deepBreathTimeouts: Int
 
     public var completionRate: Double {
         guard sessionsStarted > 0 else { return 0 }
         return Double(sessionsCompleted) / Double(sessionsStarted)
+    }
+
+    public var deepBreathConfirmRate: Double {
+        guard deepBreathStarts > 0 else { return 0 }
+        return Double(deepBreathConfirms) / Double(deepBreathStarts)
     }
 }
 
@@ -66,6 +77,7 @@ public final class StatsStore {
     public static let shared = StatsStore()
 
     private let summariesKey = "pomafocus.stats.summaries"
+    private let deepBreathKey = "pomafocus.stats.deepbreath"
     private let calendar = Calendar.current
     private let defaults: UserDefaults
 
@@ -81,7 +93,8 @@ public final class StatsStore {
         startedAt: Date,
         endedAt: Date,
         durationSeconds: Int,
-        outcome: FocusSessionOutcome
+        outcome: FocusSessionOutcome,
+        tag: String? = nil
     ) {
         var summaries = loadSummaries()
         summaries.append(
@@ -89,10 +102,26 @@ public final class StatsStore {
                 startedAt: startedAt,
                 endedAt: endedAt,
                 durationSeconds: max(0, durationSeconds),
-                outcome: outcome
+                outcome: outcome,
+                tag: tag
             )
         )
         saveSummaries(summaries)
+    }
+
+    public enum DeepBreathEvent {
+        case started
+        case confirmed
+        case timedOut
+    }
+
+    public func recordDeepBreathEvent(_ event: DeepBreathEvent, date: Date = Date()) {
+        var stats = loadDeepBreathStats()
+        let key = dayKey(for: date)
+        let current = stats[key] ?? DeepBreathCounts()
+        let updated = current.recording(event)
+        stats[key] = updated
+        saveDeepBreathStats(stats)
     }
 
     public func weeklySummary(referenceDate: Date = Date()) -> WeeklyFocusSummary {
@@ -113,6 +142,7 @@ public final class StatsStore {
     public func dailyRollups(days: Int, referenceDate: Date = Date()) -> [DailyFocusStats] {
         guard days > 0 else { return [] }
         let summaries = loadSummaries()
+        let deepBreathStats = loadDeepBreathStats()
         let startOfToday = calendar.startOfDay(for: referenceDate)
         let startDate = calendar.date(byAdding: .day, value: -(days - 1), to: startOfToday) ?? startOfToday
 
@@ -128,11 +158,15 @@ public final class StatsStore {
             let minutes = daySummaries.reduce(0) { $0 + Int(round(Double($1.durationSeconds) / 60.0)) }
             let sessionsStarted = daySummaries.count
             let sessionsCompleted = daySummaries.filter { $0.outcome == .completed }.count
+            let deepBreath = deepBreathStats[dayKey(for: date)] ?? DeepBreathCounts()
             return DailyFocusStats(
                 date: date,
                 totalMinutes: minutes,
                 sessionsStarted: sessionsStarted,
-                sessionsCompleted: sessionsCompleted
+                sessionsCompleted: sessionsCompleted,
+                deepBreathStarts: deepBreath.starts,
+                deepBreathConfirms: deepBreath.confirms,
+                deepBreathTimeouts: deepBreath.timeouts
             )
         }
     }
@@ -157,6 +191,33 @@ public final class StatsStore {
         return streak
     }
 
+    private struct DeepBreathCounts: Codable {
+        var starts: Int = 0
+        var confirms: Int = 0
+        var timeouts: Int = 0
+
+        func recording(_ event: DeepBreathEvent) -> DeepBreathCounts {
+            var updated = self
+            switch event {
+            case .started:
+                updated.starts += 1
+            case .confirmed:
+                updated.confirms += 1
+            case .timedOut:
+                updated.timeouts += 1
+            }
+            return updated
+        }
+    }
+
+    private func dayKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
     private func loadSummaries() -> [FocusSessionSummary] {
         guard let data = defaults.data(forKey: summariesKey),
               let summaries = try? JSONDecoder().decode([FocusSessionSummary].self, from: data) else {
@@ -168,5 +229,18 @@ public final class StatsStore {
     private func saveSummaries(_ summaries: [FocusSessionSummary]) {
         guard let data = try? JSONEncoder().encode(summaries) else { return }
         defaults.set(data, forKey: summariesKey)
+    }
+
+    private func loadDeepBreathStats() -> [String: DeepBreathCounts] {
+        guard let data = defaults.data(forKey: deepBreathKey),
+              let stats = try? JSONDecoder().decode([String: DeepBreathCounts].self, from: data) else {
+            return [:]
+        }
+        return stats
+    }
+
+    private func saveDeepBreathStats(_ stats: [String: DeepBreathCounts]) {
+        guard let data = try? JSONEncoder().encode(stats) else { return }
+        defaults.set(data, forKey: deepBreathKey)
     }
 }

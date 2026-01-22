@@ -106,7 +106,7 @@ If the entitlement or container is unavailable, the app drops back to NSUbiquito
 
 ## Screen Time Blocking (iOS)
 
-Screen Time blocking still works, but the custom shield UI is unavailable without the shield extension.
+Screen Time blocking works; without the shield extension only the custom shield UI is unavailable (blocking still applies).
 
 ## Live Activities (iOS)
 

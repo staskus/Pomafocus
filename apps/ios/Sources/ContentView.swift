@@ -3,9 +3,11 @@ import PomafocusKit
 
 struct ContentView: View {
     @ObservedObject private var session: PomodoroSessionController
+    private let scheduleStore: ScheduleStore
 
-    init(session: PomodoroSessionController) {
+    init(session: PomodoroSessionController, scheduleStore: ScheduleStore) {
         self.session = session
+        self.scheduleStore = scheduleStore
     }
 
     var body: some View {
@@ -19,10 +21,15 @@ struct ContentView: View {
                 .tabItem {
                     Label("Stats", systemImage: "chart.bar")
                 }
+
+            ScheduleDashboardView(store: scheduleStore)
+                .tabItem {
+                    Label("Schedule", systemImage: "calendar")
+                }
         }
     }
 }
 
 #Preview {
-    ContentView(session: PomodoroSessionController())
+    ContentView(session: PomodoroSessionController(), scheduleStore: ScheduleStore())
 }

@@ -9,7 +9,7 @@ struct PomafocusiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(session: core.session)
+            ContentView(session: core.session, scheduleStore: core.scheduleStore)
                 .onOpenURL { url in
                     handleWidgetURL(url)
                 }

@@ -6,13 +6,18 @@ final class PomafocusCore: ObservableObject {
     static let shared = PomafocusCore()
 
     let session: PomodoroSessionController
+    let scheduleStore: ScheduleStore
     private let experienceCoordinator: PomodoroExperienceCoordinator
+    private let scheduleCoordinator: ScheduleCoordinator
     private var widgetCommandTimer: Timer?
 
     private init() {
         let session = PomodoroSessionController()
         self.session = session
+        let store = ScheduleStore()
+        self.scheduleStore = store
         self.experienceCoordinator = PomodoroExperienceCoordinator(session: session)
+        self.scheduleCoordinator = ScheduleCoordinator(session: session, blocker: PomodoroBlocker.shared, store: store)
         startWidgetCommandPolling()
     }
 

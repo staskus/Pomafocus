@@ -8,6 +8,11 @@ import WidgetKit
 
 @MainActor
 public final class PomodoroSessionController: ObservableObject {
+    public enum SessionOrigin: Equatable {
+        case manual
+        case schedule(UUID)
+    }
+
     @Published public private(set) var minutes: Int
     @Published public private(set) var isRunning: Bool
     @Published public private(set) var remaining: TimeInterval
@@ -16,6 +21,7 @@ public final class PomodoroSessionController: ObservableObject {
     @Published public private(set) var deepBreathReady: Bool = false
     @Published public private(set) var deepBreathConfirmationRemaining: TimeInterval?
     @Published public private(set) var sessionTag: String?
+    @Published public private(set) var sessionOrigin: SessionOrigin = .manual
 
     public var remainingDisplay: String {
         PomodoroSessionController.format(seconds: Int(ceil(remaining)))
@@ -56,6 +62,9 @@ public final class PomodoroSessionController: ObservableObject {
     private let widgetStateManager: WidgetStateManager
     private let statsStore: StatsStore
     private var activeDuration: Int = 0
+    private var manualMinutes: Int
+    private var restoreMinutesAfterStop: Int?
+    private var restoreTagAfterStop: String?
     public static let deepBreathDuration: TimeInterval = 30
     public static let deepBreathConfirmationWindow: TimeInterval = 60
     private let deepBreathClock: () -> Date
@@ -82,6 +91,7 @@ public final class PomodoroSessionController: ObservableObject {
         self.syncManager.start()
         let initialPreferences = self.syncManager.currentPreferences()
         self.minutes = initialPreferences.minutes
+        self.manualMinutes = initialPreferences.minutes
         self.deepBreathEnabled = initialPreferences.deepBreathEnabled
         self.remaining = TimeInterval(initialPreferences.minutes * 60)
         let state = self.syncManager.currentState()
@@ -105,12 +115,16 @@ public final class PomodoroSessionController: ObservableObject {
             handleStopRequest()
         } else {
             resetDeepBreath()
+            sessionOrigin = .manual
+            restoreMinutesAfterStop = nil
+            restoreTagAfterStop = nil
             startSession(durationSeconds: minutes * 60, startDate: Date(), shouldSync: true)
         }
     }
 
     public func setMinutes(_ newValue: Int) {
-        minutes = max(1, newValue)
+        manualMinutes = max(1, newValue)
+        minutes = manualMinutes
         if !isRunning {
             remaining = TimeInterval(minutes * 60)
         }
@@ -137,19 +151,41 @@ public final class PomodoroSessionController: ObservableObject {
             return
         }
         minutes = max(1, state.duration / 60)
+        sessionOrigin = .manual
         startSession(durationSeconds: state.duration, startDate: started, shouldSync: false)
     }
 
     public func applyExternalPreferences(_ snapshot: PomodoroPreferencesSnapshot) {
         guard snapshot.originIdentifier != syncManager.deviceIdentifier else { return }
-        minutes = snapshot.minutes
+        manualMinutes = snapshot.minutes
+        if restoreMinutesAfterStop == nil {
+            minutes = snapshot.minutes
+        }
         if deepBreathEnabled && !snapshot.deepBreathEnabled {
             resetDeepBreath()
         }
         deepBreathEnabled = snapshot.deepBreathEnabled
-        if !isRunning {
+        if !isRunning && restoreMinutesAfterStop == nil {
             remaining = TimeInterval(minutes * 60)
         }
+    }
+
+    public func startScheduledSession(durationMinutes: Int, tag: String?, blockID: UUID) {
+        guard !isRunning else { return }
+        let clampedMinutes = max(1, durationMinutes)
+        restoreMinutesAfterStop = manualMinutes
+        restoreTagAfterStop = sessionTag
+        minutes = clampedMinutes
+        remaining = TimeInterval(clampedMinutes * 60)
+        sessionOrigin = .schedule(blockID)
+        sessionTag = tag
+        resetDeepBreath()
+        startSession(durationSeconds: clampedMinutes * 60, startDate: Date(), shouldSync: true)
+    }
+
+    public func stopScheduledSessionIfNeeded() {
+        guard case .schedule = sessionOrigin else { return }
+        stopSession(shouldSync: true, outcome: .stopped)
     }
 
     private func bindTimer() {
@@ -267,7 +303,16 @@ public final class PomodoroSessionController: ObservableObject {
             syncManager.publishState(duration: duration, startedAt: nil, isRunning: false)
         }
         activeDuration = 0
+        if let restoredMinutes = restoreMinutesAfterStop {
+            minutes = restoredMinutes
+            restoreMinutesAfterStop = nil
+        }
+        if let restoredTag = restoreTagAfterStop {
+            sessionTag = restoredTag
+            restoreTagAfterStop = nil
+        }
         remaining = TimeInterval(minutes * 60)
+        sessionOrigin = .manual
         publishWidgetState()
     }
 

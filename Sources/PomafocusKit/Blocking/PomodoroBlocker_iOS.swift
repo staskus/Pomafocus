@@ -17,6 +17,14 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         }
     }
 
+    public var overrideSelection: FamilyActivitySelection? {
+        didSet {
+            if isBlocking {
+                applyShield()
+            }
+        }
+    }
+
     private let authorizationCenter = AuthorizationCenter.shared
     private let store = ManagedSettingsStore()
     private let defaults: UserDefaults
@@ -58,15 +66,15 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     }
 
     public var hasSelection: Bool {
-        !selection.applicationTokens.isEmpty ||
-        !selection.webDomainTokens.isEmpty ||
-        !selection.categoryTokens.isEmpty
+        !activeSelection.applicationTokens.isEmpty ||
+        !activeSelection.webDomainTokens.isEmpty ||
+        !activeSelection.categoryTokens.isEmpty
     }
 
     public var selectionSummary: String {
-        let apps = selection.applicationTokens.count
-        let domains = selection.webDomainTokens.count
-        let categories = selection.categoryTokens.count
+        let apps = activeSelection.applicationTokens.count
+        let domains = activeSelection.webDomainTokens.count
+        let categories = activeSelection.categoryTokens.count
         return "Apps \(apps) • Websites \(domains) • Categories \(categories)"
     }
 
@@ -75,10 +83,14 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
             store.clearAllSettings()
             return
         }
-        store.shield.applications = selection.applicationTokens
-        store.shield.webDomains = selection.webDomainTokens
-        store.shield.applicationCategories = .specific(selection.categoryTokens)
-        store.shield.webDomainCategories = .specific(selection.categoryTokens)
+        store.shield.applications = activeSelection.applicationTokens
+        store.shield.webDomains = activeSelection.webDomainTokens
+        store.shield.applicationCategories = .specific(activeSelection.categoryTokens)
+        store.shield.webDomainCategories = .specific(activeSelection.categoryTokens)
+    }
+
+    private var activeSelection: FamilyActivitySelection {
+        overrideSelection ?? selection
     }
 
     private func persistSelection() {

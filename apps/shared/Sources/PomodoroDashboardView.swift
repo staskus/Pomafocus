@@ -110,7 +110,7 @@ public struct PomodoroDashboardView: View {
 
             // Minutes indicator
             HStack(spacing: BrutalistSpacing.xs) {
-                Text("\(session.minutes)")
+                Text("\(displayMinutes)")
                     .font(BrutalistTypography.headline)
                     .foregroundStyle(BrutalistColors.yellow)
                     .monospacedDigit()
@@ -301,9 +301,13 @@ public struct PomodoroDashboardView: View {
     // MARK: - Computed Properties
 
     private var progress: CGFloat {
-        let total = Double(session.minutes * 60)
+        let total = Double(session.currentDurationSeconds)
         guard total > 0 else { return 0 }
         return CGFloat(1 - (session.remaining / total))
+    }
+
+    private var displayMinutes: Int {
+        max(1, session.currentDurationSeconds / 60)
     }
 
     private var buttonTitle: String {

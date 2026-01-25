@@ -71,25 +71,6 @@ struct ScheduleDashboardView: View {
             }
 
             Spacer()
-
-            Button {
-                newScheduleName = ""
-                showScheduleNamePrompt()
-            } label: {
-                Text("ADD SCHEDULE")
-                    .font(BrutalistTypography.caption)
-                    .tracking(1)
-                    .foregroundStyle(BrutalistColors.textOnColor)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(BrutalistColors.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(BrutalistColors.border, lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
         }
         .padding(.top, BrutalistSpacing.sm)
     }
@@ -197,6 +178,25 @@ struct ScheduleDashboardView: View {
                 .buttonStyle(.plain)
 
                 Spacer()
+
+                Button {
+                    newScheduleName = ""
+                    showScheduleNamePrompt()
+                } label: {
+                    Text("ADD SCHEDULE")
+                        .font(BrutalistTypography.caption)
+                        .tracking(1)
+                        .foregroundStyle(BrutalistColors.textOnColor)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(BrutalistColors.black)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(BrutalistColors.border, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
             }
 
             Toggle(isOn: $store.schedules[index].isEnabled) {
@@ -559,16 +559,18 @@ private struct ScheduleBlockEditorView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Screen Time list")
                                 .font(.headline)
-                            Picker("Screen Time list", selection: $blockListID) {
-                                Text("Default").tag(UUID?.none)
-                                ForEach(store.blockLists) { list in
-                                    Text(list.name).tag(Optional(list.id))
+                            HStack {
+                                Picker("Screen Time list", selection: $blockListID) {
+                                    Text("Default").tag(UUID?.none)
+                                    ForEach(store.blockLists) { list in
+                                        Text(list.name).tag(Optional(list.id))
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .tint(BrutalistColors.textPrimary)
+                                .labelsHidden()
+                                Spacer()
                             }
-                            .pickerStyle(.menu)
-                            .tint(BrutalistColors.red)
-                            .labelsHidden()
-                            .frame(maxWidth: .infinity, alignment: .leading)
 
                             if store.blockLists.isEmpty {
                                 Text("No screen time lists available. Add one on the main schedule tab.")
@@ -843,16 +845,18 @@ private struct BulkBlockBuilderView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Screen Time list")
                             .font(.headline)
-                        Picker("Screen Time list", selection: $blockListID) {
-                            Text("Default").tag(UUID?.none)
-                            ForEach(store.blockLists) { list in
-                                Text(list.name).tag(Optional(list.id))
+                        HStack {
+                            Picker("Screen Time list", selection: $blockListID) {
+                                Text("Default").tag(UUID?.none)
+                                ForEach(store.blockLists) { list in
+                                    Text(list.name).tag(Optional(list.id))
+                                }
                             }
+                            .pickerStyle(.menu)
+                            .tint(BrutalistColors.textPrimary)
+                            .labelsHidden()
+                            Spacer()
                         }
-                        .pickerStyle(.menu)
-                        .tint(BrutalistColors.red)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     Text("Creates alternating focus and break blocks between the start and end time.")

@@ -20,31 +20,35 @@ final class ScheduleStore {
     private var blockerSelectionCancellable: AnyCancellable?
 
     init() {
+        let defaults: UserDefaults
         if let appGroup = UserDefaults(suiteName: "group.com.staskus.pomafocus") {
-            self.defaults = appGroup
+            defaults = appGroup
         } else {
-            self.defaults = .standard
+            defaults = .standard
         }
 
         let blockerSelection = PomodoroBlocker.shared.selection
+        let decodedBlockLists: [BlockList]
         if let data = defaults.data(forKey: blockListsKey),
            let decoded = try? JSONDecoder().decode([BlockList].self, from: data) {
-            self.blockLists = decoded
+            decodedBlockLists = decoded
         } else {
-            self.blockLists = [BlockList(name: "Default", selection: blockerSelection)]
+            decodedBlockLists = [BlockList(name: "Default", selection: blockerSelection)]
         }
 
+        let defaultBlockListID: UUID?
         if let storedID = defaults.string(forKey: defaultBlockListKey),
            let uuid = UUID(uuidString: storedID),
-           blockLists.contains(where: { $0.id == uuid }) {
-            self.defaultBlockListID = uuid
+           decodedBlockLists.contains(where: { $0.id == uuid }) {
+            defaultBlockListID = uuid
         } else {
-            self.defaultBlockListID = blockLists.first?.id
+            defaultBlockListID = decodedBlockLists.first?.id
         }
 
+        let decodedSchedules: [FocusSchedule]
         if let data = defaults.data(forKey: schedulesKey),
            let decoded = try? JSONDecoder().decode([FocusSchedule].self, from: data) {
-            self.schedules = decoded.map { schedule in
+            decodedSchedules = decoded.map { schedule in
                 var updated = schedule
                 if updated.defaultBlockListID == nil {
                     updated.defaultBlockListID = defaultBlockListID
@@ -52,16 +56,23 @@ final class ScheduleStore {
                 return updated
             }
         } else {
-            self.schedules = [FocusSchedule(name: "Workday", isEnabled: false, defaultBlockListID: defaultBlockListID, blocks: [])]
+            decodedSchedules = [FocusSchedule(name: "Workday", isEnabled: false, defaultBlockListID: defaultBlockListID, blocks: [])]
         }
 
+        let selectedScheduleID: UUID?
         if let storedID = defaults.string(forKey: selectedKey),
            let uuid = UUID(uuidString: storedID),
-           schedules.contains(where: { $0.id == uuid }) {
-            self.selectedScheduleID = uuid
+           decodedSchedules.contains(where: { $0.id == uuid }) {
+            selectedScheduleID = uuid
         } else {
-            self.selectedScheduleID = schedules.first?.id
+            selectedScheduleID = decodedSchedules.first?.id
         }
+
+        self.defaults = defaults
+        self.blockLists = decodedBlockLists
+        self.defaultBlockListID = defaultBlockListID
+        self.schedules = decodedSchedules
+        self.selectedScheduleID = selectedScheduleID
 
         migrateLegacyBlockSelections()
         syncDefaultBlockListToBlocker()
@@ -219,7 +230,7 @@ final class ScheduleStore {
         }
         guard hasLegacySelections else { return }
 
-        var migratedDefault = blockLists.first
+        let migratedDefault = blockLists.first
         var createdLists: [BlockList] = []
 
         schedules = schedules.map { schedule in

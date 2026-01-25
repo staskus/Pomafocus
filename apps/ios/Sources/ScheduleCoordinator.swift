@@ -55,9 +55,10 @@ final class ScheduleCoordinator {
         }
 
         let remainingMinutes = max(1, block.endMinutes - minutesSinceMidnight(for: now))
+        let selection = store.blockListSelection(for: schedule, block: block)
         switch block.kind {
         case .focus:
-            blocker.overrideSelection = block.selection
+            blocker.overrideSelection = selection
             session.startScheduledSession(durationMinutes: remainingMinutes, tag: block.title, blockID: block.id)
         case .break:
             blocker.overrideSelection = FamilyActivitySelection()

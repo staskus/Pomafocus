@@ -97,7 +97,7 @@ struct ScheduleDashboardView: View {
     private var blockListCard: some View {
         VStack(alignment: .leading, spacing: BrutalistSpacing.md) {
             HStack {
-                Text("BLOCK LISTS")
+                Text("SCREEN TIME LISTS")
                     .font(BrutalistTypography.caption)
                     .foregroundStyle(BrutalistColors.textSecondary)
                     .tracking(1)
@@ -109,13 +109,21 @@ struct ScheduleDashboardView: View {
                     Text("ADD LIST")
                         .font(BrutalistTypography.caption)
                         .tracking(1)
+                        .foregroundStyle(BrutalistColors.textOnColor)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(BrutalistColors.black)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(BrutalistColors.border, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(BrutalistColors.textPrimary)
             }
 
             if store.blockLists.isEmpty {
-                Text("Add a block list to control which apps are blocked.")
+                Text("Add a screen time list to control which apps are blocked.")
                     .font(BrutalistTypography.body)
                     .foregroundStyle(BrutalistColors.textSecondary)
             } else {
@@ -150,8 +158,6 @@ struct ScheduleDashboardView: View {
         VStack(spacing: BrutalistSpacing.md) {
             if let scheduleIndex = selectedScheduleIndex {
                 scheduleHeader(for: scheduleIndex)
-                Divider().background(BrutalistColors.border)
-                scheduleDefaults(for: scheduleIndex)
                 Divider().background(BrutalistColors.border)
                 blocksList(for: scheduleIndex)
                 scheduleActions
@@ -203,25 +209,6 @@ struct ScheduleDashboardView: View {
             .onChange(of: store.schedules[index].isEnabled) { _, _ in
                 store.updateSchedule(store.schedules[index])
             }
-        }
-    }
-
-    private func scheduleDefaults(for index: Int) -> some View {
-        VStack(alignment: .leading, spacing: BrutalistSpacing.sm) {
-            Text("DEFAULT BLOCK LIST")
-                .font(BrutalistTypography.caption)
-                .foregroundStyle(BrutalistColors.textSecondary)
-                .tracking(1)
-
-            Picker("Default list", selection: defaultBlockListBinding(for: index)) {
-                Text("None").tag(UUID?.none)
-                ForEach(store.blockLists) { list in
-                    Text(list.name).tag(Optional(list.id))
-                }
-            }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -291,7 +278,7 @@ struct ScheduleDashboardView: View {
                     } label: {
                         ScheduleBlockRow(
                             block: block,
-                            blockListName: blockListName(for: block, schedule: store.schedules[index])
+                            blockListName: blockListName(for: block)
                         )
                     }
                     .buttonStyle(.plain)
@@ -354,24 +341,10 @@ struct ScheduleDashboardView: View {
         store.removeSchedule(scheduleID)
     }
 
-    private func defaultBlockListBinding(for index: Int) -> Binding<UUID?> {
-        Binding(
-            get: { store.schedules[index].defaultBlockListID },
-            set: { newValue in
-                store.schedules[index].defaultBlockListID = newValue
-                store.updateSchedule(store.schedules[index])
-            }
-        )
-    }
-
-    private func blockListName(for block: ScheduleBlock, schedule: FocusSchedule) -> String? {
+    private func blockListName(for block: ScheduleBlock) -> String? {
         guard block.kind == .focus else { return nil }
         if let blockID = block.blockListID,
            let list = store.blockLists.first(where: { $0.id == blockID }) {
-            return list.name
-        }
-        if let scheduleID = schedule.defaultBlockListID,
-           let list = store.blockLists.first(where: { $0.id == scheduleID }) {
             return list.name
         }
         return store.blockLists.first(where: { $0.id == store.defaultBlockListID })?.name
@@ -475,7 +448,7 @@ private struct ScheduleBlockRow: View {
                 .foregroundStyle(BrutalistColors.textSecondary)
 
             if let blockListName {
-                Text("List: \(blockListName)")
+                Text("Screen Time: \(blockListName)")
                     .font(BrutalistTypography.caption)
                     .foregroundStyle(BrutalistColors.textSecondary)
             }
@@ -584,22 +557,25 @@ private struct ScheduleBlockEditorView: View {
 
                     if kind == .focus {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Block list")
+                            Text("Screen Time list")
                                 .font(.headline)
-                            Picker("Block list", selection: $blockListID) {
+                            Picker("Screen Time list", selection: $blockListID) {
                                 Text("Default").tag(UUID?.none)
                                 ForEach(store.blockLists) { list in
                                     Text(list.name).tag(Optional(list.id))
                                 }
                             }
                             .pickerStyle(.menu)
+                            .tint(BrutalistColors.red)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                             if store.blockLists.isEmpty {
-                                Text("No block lists available. Add one on the main schedule tab.")
+                                Text("No screen time lists available. Add one on the main schedule tab.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             } else if blockListID == nil {
-                                Text("Uses the schedule or global default list.")
+                                Text("Uses the global default list.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             } else if let list = store.blockLists.first(where: { $0.id == blockListID }) {
@@ -716,7 +692,7 @@ private struct BlockListEditorView: View {
         self.isDefault = isDefault
         self.onSave = onSave
         self.onDelete = onDelete
-        _name = State(initialValue: blockList?.name ?? "New List")
+        _name = State(initialValue: blockList?.name ?? "New Screen Time List")
         _selection = State(initialValue: blockList?.selection ?? FamilyActivitySelection())
         _makeDefault = State(initialValue: isDefault)
     }
@@ -733,10 +709,27 @@ private struct BlockListEditorView: View {
                     Text(summary)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button("Choose apps & websites") {
+                    Button {
                         showingPicker = true
+                    } label: {
+                        HStack {
+                            Text("CHOOSE APPS")
+                                .font(BrutalistTypography.caption)
+                                .tracking(1)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundStyle(BrutalistColors.textPrimary)
+                        .padding(BrutalistSpacing.sm)
+                        .background(BrutalistColors.surfaceSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: BrutalistRadius.sm)
+                                .stroke(BrutalistColors.border, lineWidth: 1)
+                        )
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.plain)
                 }
 
                 Toggle("Set as default", isOn: $makeDefault)
@@ -755,7 +748,7 @@ private struct BlockListEditorView: View {
                 }
             }
             .padding()
-            .navigationTitle("Block List")
+            .navigationTitle("Screen Time List")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -766,7 +759,7 @@ private struct BlockListEditorView: View {
                     Button("Save") {
                         let updated = BlockList(
                             id: blockList?.id ?? UUID(),
-                            name: name.isEmpty ? "Block List" : name,
+                            name: name.isEmpty ? "Screen Time List" : name,
                             selection: selection
                         )
                         onSave(updated, makeDefault)
@@ -848,15 +841,18 @@ private struct BulkBlockBuilderView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Block list")
+                        Text("Screen Time list")
                             .font(.headline)
-                        Picker("Block list", selection: $blockListID) {
+                        Picker("Screen Time list", selection: $blockListID) {
                             Text("Default").tag(UUID?.none)
                             ForEach(store.blockLists) { list in
                                 Text(list.name).tag(Optional(list.id))
                             }
                         }
                         .pickerStyle(.menu)
+                        .tint(BrutalistColors.red)
+                        .labelsHidden()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     Text("Creates alternating focus and break blocks between the start and end time.")

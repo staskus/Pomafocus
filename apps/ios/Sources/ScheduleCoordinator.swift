@@ -55,7 +55,7 @@ final class ScheduleCoordinator {
         }
 
         let remainingMinutes = max(1, block.endMinutes - minutesSinceMidnight(for: now))
-        let selection = store.blockListSelection(for: schedule, block: block)
+        let selection = store.blockListSelection(for: block)
         switch block.kind {
         case .focus:
             blocker.overrideSelection = selection

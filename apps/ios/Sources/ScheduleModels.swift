@@ -84,20 +84,17 @@ public struct FocusSchedule: Identifiable, Codable {
     public var id: UUID
     public var name: String
     public var isEnabled: Bool
-    public var defaultBlockListID: UUID?
     public var blocks: [ScheduleBlock]
 
     public init(
         id: UUID = UUID(),
         name: String,
         isEnabled: Bool,
-        defaultBlockListID: UUID? = nil,
         blocks: [ScheduleBlock]
     ) {
         self.id = id
         self.name = name
         self.isEnabled = isEnabled
-        self.defaultBlockListID = defaultBlockListID
         self.blocks = blocks
     }
 }

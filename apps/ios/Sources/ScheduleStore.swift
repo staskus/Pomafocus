@@ -46,17 +46,25 @@ final class ScheduleStore {
         }
 
         let decodedSchedules: [FocusSchedule]
-        if let data = defaults.data(forKey: schedulesKey),
-           let decoded = try? JSONDecoder().decode([FocusSchedule].self, from: data) {
-            decodedSchedules = decoded.map { schedule in
-                var updated = schedule
-                if updated.defaultBlockListID == nil {
-                    updated.defaultBlockListID = defaultBlockListID
+        if let data = defaults.data(forKey: schedulesKey) {
+            if let decoded = try? JSONDecoder().decode([LegacyFocusSchedule].self, from: data) {
+                decodedSchedules = decoded.map { legacy in
+                    let blocks = legacy.blocks.map { block -> ScheduleBlock in
+                        guard block.kind == .focus, block.blockListID == nil else { return block }
+                        guard let legacyDefault = legacy.defaultBlockListID else { return block }
+                        var updated = block
+                        updated.blockListID = legacyDefault
+                        return updated
+                    }
+                    return FocusSchedule(id: legacy.id, name: legacy.name, isEnabled: legacy.isEnabled, blocks: blocks)
                 }
-                return updated
+            } else if let decoded = try? JSONDecoder().decode([FocusSchedule].self, from: data) {
+                decodedSchedules = decoded
+            } else {
+                decodedSchedules = [FocusSchedule(name: "Workday", isEnabled: false, blocks: [])]
             }
         } else {
-            decodedSchedules = [FocusSchedule(name: "Workday", isEnabled: false, defaultBlockListID: defaultBlockListID, blocks: [])]
+            decodedSchedules = [FocusSchedule(name: "Workday", isEnabled: false, blocks: [])]
         }
 
         let selectedScheduleID: UUID?
@@ -94,7 +102,7 @@ final class ScheduleStore {
     }
 
     func addSchedule(named name: String) -> FocusSchedule {
-        let schedule = FocusSchedule(name: name, isEnabled: false, defaultBlockListID: defaultBlockListID, blocks: [])
+        let schedule = FocusSchedule(name: name, isEnabled: false, blocks: [])
         schedules.append(schedule)
         persistSchedules()
         return schedule
@@ -166,9 +174,6 @@ final class ScheduleStore {
         blockLists.removeAll { $0.id == listID }
         schedules = schedules.map { schedule in
             var updated = schedule
-            if updated.defaultBlockListID == listID {
-                updated.defaultBlockListID = defaultBlockListID
-            }
             updated.blocks = updated.blocks.map { block in
                 guard block.blockListID == listID else { return block }
                 var replacement = block
@@ -191,13 +196,9 @@ final class ScheduleStore {
         syncDefaultBlockListToBlocker()
     }
 
-    func blockListSelection(for schedule: FocusSchedule, block: ScheduleBlock) -> FamilyActivitySelection? {
+    func blockListSelection(for block: ScheduleBlock) -> FamilyActivitySelection? {
         if let blockID = block.blockListID,
            let list = blockLists.first(where: { $0.id == blockID }) {
-            return list.selection
-        }
-        if let scheduleListID = schedule.defaultBlockListID,
-           let list = blockLists.first(where: { $0.id == scheduleListID }) {
             return list.selection
         }
         if let defaultBlockListID,
@@ -258,6 +259,14 @@ final class ScheduleStore {
         }
         persistBlockLists()
         persistSchedules()
+    }
+
+    private struct LegacyFocusSchedule: Codable {
+        var id: UUID
+        var name: String
+        var isEnabled: Bool
+        var defaultBlockListID: UUID?
+        var blocks: [ScheduleBlock]
     }
 
     private func syncDefaultBlockListToBlocker() {

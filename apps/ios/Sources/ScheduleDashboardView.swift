@@ -79,10 +79,10 @@ struct ScheduleDashboardView: View {
                 Text("ADD SCHEDULE")
                     .font(BrutalistTypography.caption)
                     .tracking(1)
-                    .foregroundStyle(BrutalistColors.textPrimary)
+                    .foregroundStyle(BrutalistColors.textOnColor)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 10)
-                    .background(BrutalistColors.surfaceSecondary)
+                    .background(BrutalistColors.red)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
@@ -238,14 +238,24 @@ struct ScheduleDashboardView: View {
                 )
                 isPresentingBlockEditor = true
             } label: {
-                actionRowLabel("ADD BLOCK", systemImage: "plus")
+                actionRowLabel(
+                    "ADD BLOCK",
+                    systemImage: "plus",
+                    background: BrutalistColors.yellow,
+                    foreground: BrutalistColors.black
+                )
             }
             .buttonStyle(.plain)
 
             Button {
                 isPresentingBulkBuilder = true
             } label: {
-                actionRowLabel("BULK ADD", systemImage: "square.grid.2x2")
+                actionRowLabel(
+                    "BULK ADD",
+                    systemImage: "square.grid.2x2",
+                    background: BrutalistColors.black,
+                    foreground: BrutalistColors.textOnColor
+                )
             }
             .buttonStyle(.plain)
 
@@ -253,7 +263,13 @@ struct ScheduleDashboardView: View {
                 Button(role: .destructive) {
                     deleteSelectedSchedule()
                 } label: {
-                    actionRowLabel("DELETE SCHEDULE", systemImage: "trash")
+                    actionRowLabel(
+                        "DELETE SCHEDULE",
+                        systemImage: "trash",
+                        background: BrutalistColors.surfaceSecondary,
+                        foreground: BrutalistColors.red,
+                        border: BrutalistColors.red
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -284,7 +300,13 @@ struct ScheduleDashboardView: View {
         }
     }
 
-    private func actionRowLabel(_ text: String, systemImage: String) -> some View {
+    private func actionRowLabel(
+        _ text: String,
+        systemImage: String,
+        background: Color,
+        foreground: Color,
+        border: Color = BrutalistColors.border
+    ) -> some View {
         HStack {
             Text(text)
                 .font(BrutalistTypography.caption)
@@ -293,13 +315,13 @@ struct ScheduleDashboardView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .bold))
         }
-        .foregroundStyle(BrutalistColors.textPrimary)
+        .foregroundStyle(foreground)
         .padding(BrutalistSpacing.sm)
-        .background(BrutalistColors.surfaceSecondary)
+        .background(background)
         .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: BrutalistRadius.sm)
-                .stroke(BrutalistColors.border, lineWidth: 1)
+                .stroke(border, lineWidth: 1)
         )
     }
 

@@ -71,6 +71,25 @@ struct ScheduleDashboardView: View {
             }
 
             Spacer()
+
+            Button {
+                newScheduleName = ""
+                showScheduleNamePrompt()
+            } label: {
+                Text("ADD SCHEDULE")
+                    .font(BrutalistTypography.caption)
+                    .tracking(1)
+                    .foregroundStyle(BrutalistColors.textPrimary)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(BrutalistColors.surfaceSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(BrutalistColors.border, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, BrutalistSpacing.sm)
     }
@@ -172,17 +191,6 @@ struct ScheduleDashboardView: View {
                 .buttonStyle(.plain)
 
                 Spacer()
-
-                Button {
-                    newScheduleName = ""
-                    showScheduleNamePrompt()
-                } label: {
-                    Text("ADD SCHEDULE")
-                        .font(BrutalistTypography.caption)
-                        .tracking(1)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(BrutalistColors.textPrimary)
             }
 
             Toggle(isOn: $store.schedules[index].isEnabled) {
@@ -212,6 +220,8 @@ struct ScheduleDashboardView: View {
                 }
             }
             .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -390,6 +400,7 @@ private struct BlockListRow: View {
                     }
                     .font(BrutalistTypography.caption)
                     .foregroundStyle(BrutalistColors.textSecondary)
+                    .buttonStyle(.plain)
                 }
             }
 

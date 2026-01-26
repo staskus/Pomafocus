@@ -71,7 +71,13 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
                 updatedHosts.append("\n")
             }
 
-            Self.writeHostsFile(updatedHosts, hostsPath: hostsPath)
+            DispatchQueue.main.async {
+                PrivilegedHelperManager.shared.applyHosts(updatedHosts) { success, message in
+                    if !success, let message {
+                        NSLog("Pomafocus: failed to update /etc/hosts: \(message)")
+                    }
+                }
+            }
         }
     }
 
@@ -94,40 +100,6 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         return output.joined(separator: "\n") + "\n"
     }
 
-    nonisolated private static func writeHostsFile(_ contents: String, hostsPath: String) {
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("pomafocus-hosts-\(UUID().uuidString)")
-        do {
-            try contents.write(to: tempURL, atomically: true, encoding: .utf8)
-            let installCommand = "install -m 644 \(shellEscape(tempURL.path)) \(shellEscape(hostsPath))"
-            let flushCommand = "dscacheutil -flushcache && killall -HUP mDNSResponder"
-            let command = "\(installCommand) && \(flushCommand)"
-            guard runAppleScriptShell(command) else {
-                NSLog("Pomafocus: failed to update /etc/hosts")
-                return
-            }
-        } catch {
-            return
-        }
-        try? FileManager.default.removeItem(at: tempURL)
-    }
-
-    nonisolated private static func runAppleScriptShell(_ command: String) -> Bool {
-        let escapedCommand = appleScriptEscape(command)
-        let script = "do shell script \"\(escapedCommand)\" with administrator privileges"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-        let errorPipe = Pipe()
-        process.standardError = errorPipe
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
-    }
 
     private func parseDomains(from text: String) -> [String] {
         let separators = CharacterSet(charactersIn: ", \t\r\n")
@@ -167,14 +139,5 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         return results
     }
 
-    nonisolated private static func shellEscape(_ value: String) -> String {
-        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
-    nonisolated private static func appleScriptEscape(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-    }
 }
 #endif

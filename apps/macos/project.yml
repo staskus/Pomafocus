@@ -34,6 +34,7 @@ targets:
     dependencies:
       - package: PomafocusRoot
         product: PomafocusKit
+      - target: PomafocusHelper
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: PomafocusMac.entitlements
@@ -49,3 +50,29 @@ targets:
         OTHER_LDFLAGS:
           - "-framework"
           - Carbon
+    postBuildScripts:
+      - name: Embed Privileged Helper
+        script: |
+          set -euo pipefail
+          HELPER_NAME="com.staskus.pomafocus.mac.helper"
+          HELPER_SRC="${BUILT_PRODUCTS_DIR}/${HELPER_NAME}"
+          HELPER_DEST="${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/PrivilegedHelperTools"
+          LAUNCHD_DEST="${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchServices"
+          mkdir -p "${HELPER_DEST}" "${LAUNCHD_DEST}"
+          cp -f "${HELPER_SRC}" "${HELPER_DEST}/${HELPER_NAME}"
+          cp -f "${SRCROOT}/PrivilegedHelper/${HELPER_NAME}.plist" "${LAUNCHD_DEST}/${HELPER_NAME}.plist"
+        shell: /bin/sh
+
+  PomafocusHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: ../../apps/macos/PrivilegedHelper
+      - path: ../../Sources/PomafocusKit/Blocking/PrivilegedHelperProtocol.swift
+    settings:
+      base:
+        PRODUCT_NAME: com.staskus.pomafocus.mac.helper
+        PRODUCT_BUNDLE_IDENTIFIER: com.staskus.pomafocus.mac.helper
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: L4KYCD4RPZ
+        INFOPLIST_FILE: ../../apps/macos/PrivilegedHelper/Info.plist

@@ -28,5 +28,10 @@
 	<false/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SMPrivilegedExecutables</key>
+	<dict>
+		<key>com.staskus.pomafocus.mac.helper</key>
+		<string>identifier &quot;com.staskus.pomafocus.mac.helper&quot; and anchor apple generic and certificate leaf[subject.OU] = &quot;L4KYCD4RPZ&quot;</string>
+	</dict>
 </dict>
 </plist>

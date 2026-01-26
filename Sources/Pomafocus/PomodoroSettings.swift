@@ -9,16 +9,16 @@ final class PomodoroSettings {
         var minutes: Int
         var hotkey: Hotkey
         var deepBreathEnabled: Bool
-        var startScriptPath: String
-        var stopScriptPath: String
+        var startScript: String
+        var stopScript: String
     }
 
     private enum Keys {
         static let minutes = "pomodoro.minutes"
         static let hotkey = "pomodoro.hotkey"
         static let deepBreath = "pomodoro.deepBreathEnabled"
-        static let startScriptPath = "pomodoro.startScriptPath"
-        static let stopScriptPath = "pomodoro.stopScriptPath"
+        static let startScript = "pomodoro.startScriptPath"
+        static let stopScript = "pomodoro.stopScriptPath"
     }
 
     private let defaults: UserDefaults
@@ -35,17 +35,21 @@ final class PomodoroSettings {
             minutes: preferences.minutes,
             hotkey: storedHotkey(),
             deepBreathEnabled: preferences.deepBreathEnabled,
-            startScriptPath: defaults.string(forKey: Keys.startScriptPath) ?? "",
-            stopScriptPath: defaults.string(forKey: Keys.stopScriptPath) ?? ""
+            startScript: defaults.string(forKey: Keys.startScript) ?? "",
+            stopScript: defaults.string(forKey: Keys.stopScript) ?? ""
         )
     }
 
     func save(_ snapshot: Snapshot) {
+        let storedMinutes = defaults.integer(forKey: Keys.minutes)
+        let storedDeepBreath = defaults.bool(forKey: Keys.deepBreath)
         defaults.set(snapshot.minutes, forKey: Keys.minutes)
         defaults.set(snapshot.deepBreathEnabled, forKey: Keys.deepBreath)
-        defaults.set(snapshot.startScriptPath, forKey: Keys.startScriptPath)
-        defaults.set(snapshot.stopScriptPath, forKey: Keys.stopScriptPath)
-        syncManager.publishPreferences(minutes: snapshot.minutes, deepBreathEnabled: snapshot.deepBreathEnabled)
+        defaults.set(snapshot.startScript, forKey: Keys.startScript)
+        defaults.set(snapshot.stopScript, forKey: Keys.stopScript)
+        if storedMinutes != snapshot.minutes || storedDeepBreath != snapshot.deepBreathEnabled {
+            syncManager.publishPreferences(minutes: snapshot.minutes, deepBreathEnabled: snapshot.deepBreathEnabled)
+        }
         if let data = try? JSONEncoder().encode(snapshot.hotkey) {
             defaults.set(data, forKey: Keys.hotkey)
         }

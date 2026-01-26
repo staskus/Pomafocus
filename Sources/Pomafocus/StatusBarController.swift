@@ -173,7 +173,7 @@ final class StatusBarController {
         timer.start(duration: TimeInterval(durationSeconds), startDate: startDate)
         blocker.beginBlocking()
         if shouldSync {
-            runScriptIfNeeded(currentSnapshot.startScriptPath)
+            runScriptIfNeeded(currentSnapshot.startScript)
         }
         if shouldSync {
             syncManager.publishState(duration: durationSeconds, startedAt: startDate, isRunning: true)
@@ -186,7 +186,7 @@ final class StatusBarController {
         blocker.endBlocking()
         currentSessionStart = nil
         if shouldSync {
-            runScriptIfNeeded(currentSnapshot.stopScriptPath)
+            runScriptIfNeeded(currentSnapshot.stopScript)
         }
         if shouldSync {
             let duration = activeDuration == 0 ? currentSnapshot.minutes * 60 : activeDuration
@@ -314,15 +314,13 @@ final class StatusBarController {
         updateStatusTitle()
     }
 
-    private func runScriptIfNeeded(_ path: String) {
-        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func runScriptIfNeeded(_ script: String) {
+        let trimmed = script.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let expandedPath = (trimmed as NSString).expandingTildeInPath
-        guard FileManager.default.fileExists(atPath: expandedPath) else { return }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [expandedPath]
+        process.arguments = ["-lc", trimmed]
         process.standardOutput = nil
         process.standardError = nil
         do {

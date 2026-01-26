@@ -491,7 +491,7 @@ private struct ScheduleBlockEditorView: View {
     @State private var title: String
     @State private var kind: ScheduleKind
     @State private var startMinutes: Int
-    @State private var durationMinutes: Int
+    @State private var endMinutes: Int
     @State private var days: Set<Weekday>
     @State private var blockListID: UUID?
 
@@ -507,8 +507,10 @@ private struct ScheduleBlockEditorView: View {
         self.onDelete = onDelete
         _title = State(initialValue: block?.title ?? "Focus Block")
         _kind = State(initialValue: block?.kind ?? .focus)
-        _startMinutes = State(initialValue: block?.startMinutes ?? 9 * 60)
-        _durationMinutes = State(initialValue: block?.durationMinutes ?? 50)
+        let start = block?.startMinutes ?? 9 * 60
+        let duration = block?.durationMinutes ?? 50
+        _startMinutes = State(initialValue: start)
+        _endMinutes = State(initialValue: start + max(5, duration))
         _days = State(initialValue: block?.days ?? Set(Weekday.allCases))
         _blockListID = State(initialValue: block?.blockListID)
     }
@@ -530,7 +532,10 @@ private struct ScheduleBlockEditorView: View {
                     DatePicker("Start", selection: startDateBinding, displayedComponents: .hourAndMinute)
                         .datePickerStyle(.compact)
 
-                    Stepper(value: $durationMinutes, in: 5...180, step: 5) {
+                    DatePicker("End", selection: endDateBinding, displayedComponents: .hourAndMinute)
+                        .datePickerStyle(.compact)
+
+                    Stepper(value: durationBinding, in: 5...240, step: 5) {
                         Text("Duration: \(durationMinutes) min")
                     }
 
@@ -634,7 +639,36 @@ private struct ScheduleBlockEditorView: View {
     private var startDateBinding: Binding<Date> {
         Binding(
             get: { date(from: startMinutes) },
-            set: { startMinutes = minutes(from: $0) }
+            set: { newValue in
+                let updatedStart = minutes(from: newValue)
+                let delta = durationMinutes
+                startMinutes = updatedStart
+                endMinutes = updatedStart + delta
+            }
+        )
+    }
+
+    private var endDateBinding: Binding<Date> {
+        Binding(
+            get: { date(from: endMinutes) },
+            set: { newValue in
+                let updatedEnd = minutes(from: newValue)
+                endMinutes = max(updatedEnd, startMinutes + 5)
+            }
+        )
+    }
+
+    private var durationMinutes: Int {
+        max(5, endMinutes - startMinutes)
+    }
+
+    private var durationBinding: Binding<Int> {
+        Binding(
+            get: { durationMinutes },
+            set: { newValue in
+                let clamped = max(5, newValue)
+                endMinutes = startMinutes + clamped
+            }
         )
     }
 

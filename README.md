@@ -19,6 +19,14 @@ Modern SwiftUI Pomodoro client for iOS plus a native AppKit menu bar companion o
 - Optional "Deep Breath" safety toggle that forces a 30-second pause before manual stops, followed by a 60-second confirmation window; synced between devices.
 - Screen Time-based app/site blocking on iOS (per-device selections) that follow remote sessions via silent push.
 
+### Screenshots
+
+| | |
+|---|---|
+| <img src="https://github.com/user-attachments/assets/535640c3-2284-4974-b552-0aec289cbdc6" width="300" /> | <img src="https://github.com/user-attachments/assets/0e18515e-c6ab-4c15-80b6-49bd238209b0" width="300" /> |
+| <img src="https://github.com/user-attachments/assets/e33fe4fa-dd89-4adc-b0b6-947876460b5a" width="300" /> | <img src="https://github.com/user-attachments/assets/4aaf1829-4829-45ee-ae21-d323b3d6a2a2" width="300" /> |
+
+
 ## Projects & Tooling
 
 Everything flows from the Swift package in `Sources/` and the XcodeGen manifests in `apps/`. Regenerate the disposable projects/workspace whenever manifests or shared sources change:

@@ -1,6 +1,5 @@
 #if os(macOS)
 import Foundation
-import Combine
 
 @MainActor
 public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
@@ -11,6 +10,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     private let blockStartMarker = "# Pomafocus Block Start"
     private let blockEndMarker = "# Pomafocus Block End"
     private let blockAddress = "127.0.0.1"
+    private let workQueue = DispatchQueue(label: "com.staskus.pomafocus.blocking", qos: .utility)
 
     private var blockedDomains: [String] = []
 
@@ -49,34 +49,41 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     }
 
     private func applyBlocking(enabled: Bool) {
-        guard let originalHosts = try? String(contentsOfFile: hostsPath, encoding: .utf8) else { return }
-        let sanitizedHosts = removeBlockSection(from: originalHosts)
-        var updatedHosts = sanitizedHosts
+        let domains = blockedDomains
+        let hostsPath = hostsPath
+        let blockStartMarker = blockStartMarker
+        let blockEndMarker = blockEndMarker
+        let blockAddress = blockAddress
+        workQueue.async {
+            guard let originalHosts = try? String(contentsOfFile: hostsPath, encoding: .utf8) else { return }
+            let sanitizedHosts = Self.removeBlockSection(from: originalHosts, startMarker: blockStartMarker, endMarker: blockEndMarker)
+            var updatedHosts = sanitizedHosts
 
-        if enabled, !blockedDomains.isEmpty {
-            if !updatedHosts.hasSuffix("\n"), !updatedHosts.isEmpty {
+            if enabled, !domains.isEmpty {
+                if !updatedHosts.hasSuffix("\n"), !updatedHosts.isEmpty {
+                    updatedHosts.append("\n")
+                }
+                updatedHosts.append(blockStartMarker)
+                updatedHosts.append("\n")
+                updatedHosts.append(domains.map { "\(blockAddress) \($0)" }.joined(separator: "\n"))
+                updatedHosts.append("\n")
+                updatedHosts.append(blockEndMarker)
                 updatedHosts.append("\n")
             }
-            updatedHosts.append(blockStartMarker)
-            updatedHosts.append("\n")
-            updatedHosts.append(blockedDomains.map { "\(blockAddress) \($0)" }.joined(separator: "\n"))
-            updatedHosts.append("\n")
-            updatedHosts.append(blockEndMarker)
-            updatedHosts.append("\n")
-        }
 
-        writeHostsFile(updatedHosts)
+            Self.writeHostsFile(updatedHosts, hostsPath: hostsPath)
+        }
     }
 
-    private func removeBlockSection(from hosts: String) -> String {
+    nonisolated private static func removeBlockSection(from hosts: String, startMarker: String, endMarker: String) -> String {
         var output: [String] = []
         var skipping = false
         for line in hosts.split(whereSeparator: \.isNewline) {
-            if line == blockStartMarker {
+            if line == startMarker {
                 skipping = true
                 continue
             }
-            if line == blockEndMarker {
+            if line == endMarker {
                 skipping = false
                 continue
             }
@@ -87,7 +94,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         return output.joined(separator: "\n") + "\n"
     }
 
-    private func writeHostsFile(_ contents: String) {
+    nonisolated private static func writeHostsFile(_ contents: String, hostsPath: String) {
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("pomafocus-hosts-\(UUID().uuidString)")
         do {
@@ -95,23 +102,30 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
             let installCommand = "install -m 644 \(shellEscape(tempURL.path)) \(shellEscape(hostsPath))"
             let flushCommand = "dscacheutil -flushcache && killall -HUP mDNSResponder"
             let command = "\(installCommand) && \(flushCommand)"
-            runAppleScriptShell(command)
+            guard runAppleScriptShell(command) else {
+                NSLog("Pomafocus: failed to update /etc/hosts")
+                return
+            }
         } catch {
             return
         }
         try? FileManager.default.removeItem(at: tempURL)
     }
 
-    private func runAppleScriptShell(_ command: String) {
+    nonisolated private static func runAppleScriptShell(_ command: String) -> Bool {
         let escapedCommand = appleScriptEscape(command)
         let script = "do shell script \"\(escapedCommand)\" with administrator privileges"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", script]
+        let errorPipe = Pipe()
+        process.standardError = errorPipe
         do {
             try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
         } catch {
-            return
+            return false
         }
     }
 
@@ -153,11 +167,11 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         return results
     }
 
-    private func shellEscape(_ value: String) -> String {
+    nonisolated private static func shellEscape(_ value: String) -> String {
         "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    private func appleScriptEscape(_ value: String) -> String {
+    nonisolated private static func appleScriptEscape(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")

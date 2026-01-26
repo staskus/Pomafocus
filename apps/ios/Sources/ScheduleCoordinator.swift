@@ -7,14 +7,27 @@ final class ScheduleCoordinator {
     private let session: PomodoroSessionController
     private let blocker: PomodoroBlocker
     private let store: ScheduleStore
+    private let notifier: ScheduleNotificationManager
     private let calendar = Calendar.current
     private var timer: Timer?
     private var activeBlockID: UUID?
+    private var lastActiveBlock: ScheduleBlock?
+    private var lastScheduleEnabled: Bool?
+    private var lastScheduleName: String?
 
-    init(session: PomodoroSessionController, blocker: PomodoroBlocker, store: ScheduleStore) {
+    init(
+        session: PomodoroSessionController,
+        blocker: PomodoroBlocker,
+        store: ScheduleStore,
+        notifier: ScheduleNotificationManager = .shared
+    ) {
         self.session = session
         self.blocker = blocker
         self.store = store
+        self.notifier = notifier
+        Task { @MainActor in
+            await notifier.requestAuthorizationIfNeeded()
+        }
         startTimer()
         evaluateSchedule()
     }
@@ -28,9 +41,21 @@ final class ScheduleCoordinator {
     }
 
     private func evaluateSchedule() {
-        guard let schedule = store.selectedSchedule, schedule.isEnabled else {
+        let schedule = store.selectedSchedule
+        let isEnabled = schedule?.isEnabled ?? false
+        if let previous = lastScheduleEnabled, previous != isEnabled, let scheduleName = schedule?.name ?? lastScheduleName {
+            notifier.notifyScheduleChange(isEnabled: isEnabled, scheduleName: scheduleName)
+        }
+        lastScheduleEnabled = isEnabled
+        lastScheduleName = schedule?.name ?? lastScheduleName
+
+        guard let schedule, isEnabled else {
             activeBlockID = nil
             blocker.overrideSelection = nil
+            if let lastActiveBlock {
+                notifier.notifyBlockEnd(lastActiveBlock)
+                self.lastActiveBlock = nil
+            }
             if session.isRunning {
                 session.stopScheduledSessionIfNeeded()
             }
@@ -41,6 +66,10 @@ final class ScheduleCoordinator {
         guard let block = activeBlock(in: schedule, at: now) else {
             activeBlockID = nil
             blocker.overrideSelection = nil
+            if let lastActiveBlock {
+                notifier.notifyBlockEnd(lastActiveBlock)
+                self.lastActiveBlock = nil
+            }
             if session.isRunning {
                 session.stopScheduledSessionIfNeeded()
             }
@@ -54,6 +83,9 @@ final class ScheduleCoordinator {
             return
         }
 
+        if let lastActiveBlock, lastActiveBlock.id != block.id {
+            notifier.notifyBlockEnd(lastActiveBlock)
+        }
         let remainingMinutes = max(1, block.endMinutes - minutesSinceMidnight(for: now))
         let selection = store.blockListSelection(for: block)
         switch block.kind {
@@ -65,6 +97,8 @@ final class ScheduleCoordinator {
             session.startScheduledSession(durationMinutes: remainingMinutes, tag: block.title, blockID: block.id)
         }
         activeBlockID = block.id
+        lastActiveBlock = block
+        notifier.notifyBlockStart(block)
     }
 
     private func activeBlock(in schedule: FocusSchedule, at date: Date) -> ScheduleBlock? {

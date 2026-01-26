@@ -9,16 +9,12 @@ final class PomodoroSettings {
         var minutes: Int
         var hotkey: Hotkey
         var deepBreathEnabled: Bool
-        var startScript: String
-        var stopScript: String
     }
 
     private enum Keys {
         static let minutes = "pomodoro.minutes"
         static let hotkey = "pomodoro.hotkey"
         static let deepBreath = "pomodoro.deepBreathEnabled"
-        static let startScript = "pomodoro.startScriptPath"
-        static let stopScript = "pomodoro.stopScriptPath"
     }
 
     private let defaults: UserDefaults
@@ -34,9 +30,7 @@ final class PomodoroSettings {
         return Snapshot(
             minutes: preferences.minutes,
             hotkey: storedHotkey(),
-            deepBreathEnabled: preferences.deepBreathEnabled,
-            startScript: defaults.string(forKey: Keys.startScript) ?? "",
-            stopScript: defaults.string(forKey: Keys.stopScript) ?? ""
+            deepBreathEnabled: preferences.deepBreathEnabled
         )
     }
 
@@ -45,8 +39,6 @@ final class PomodoroSettings {
         let storedDeepBreath = defaults.bool(forKey: Keys.deepBreath)
         defaults.set(snapshot.minutes, forKey: Keys.minutes)
         defaults.set(snapshot.deepBreathEnabled, forKey: Keys.deepBreath)
-        defaults.set(snapshot.startScript, forKey: Keys.startScript)
-        defaults.set(snapshot.stopScript, forKey: Keys.stopScript)
         if storedMinutes != snapshot.minutes || storedDeepBreath != snapshot.deepBreathEnabled {
             syncManager.publishPreferences(minutes: snapshot.minutes, deepBreathEnabled: snapshot.deepBreathEnabled)
         }

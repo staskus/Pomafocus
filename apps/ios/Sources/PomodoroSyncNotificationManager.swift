@@ -27,7 +27,11 @@ final class PomodoroSyncNotificationManager {
             content.body = "\(max(1, durationMinutes))-minute timer is now running."
             content.sound = .default
             let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-            UNUserNotificationCenter.current().add(request)
+            do {
+                try await UNUserNotificationCenter.current().add(request)
+            } catch {
+                // Ignore; notifications are best-effort.
+            }
         }
     }
 }

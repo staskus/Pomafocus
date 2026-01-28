@@ -8,7 +8,10 @@ final class PrivilegedHelperManager {
     static let shared = PrivilegedHelperManager()
 
     private let helperBundleID = "com.staskus.pomafocus.mac.helper"
+    private let helperToolPath = "/Library/PrivilegedHelperTools/com.staskus.pomafocus.mac.helper"
+    private let helperPlistPath = "/Library/LaunchDaemons/com.staskus.pomafocus.mac.helper.plist"
     private var connection: NSXPCConnection?
+    private var helperInstalledCache: Bool?
 
     private init() {}
 
@@ -50,6 +53,7 @@ final class PrivilegedHelperManager {
         AuthorizationFree(authorizationRef, [])
 
         if blessed {
+            helperInstalledCache = true
             completion(true, nil)
         } else {
             let message = error?.takeRetainedValue().localizedDescription ?? "Failed to install helper"
@@ -58,11 +62,22 @@ final class PrivilegedHelperManager {
     }
 
     private func isHelperInstalled() -> Bool {
+        if let cached = helperInstalledCache {
+            return cached
+        }
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: helperToolPath) || fileManager.fileExists(atPath: helperPlistPath) {
+            helperInstalledCache = true
+            return true
+        }
         guard let job = SMJobCopyDictionary(kSMDomainSystemLaunchd, helperBundleID as CFString) else {
+            helperInstalledCache = false
             return false
         }
         let dict = job.takeRetainedValue() as NSDictionary
-        return dict.count > 0
+        let isInstalled = dict.count > 0
+        helperInstalledCache = isInstalled
+        return isInstalled
     }
 
     private func createAuthorizationRef() -> AuthorizationRef? {

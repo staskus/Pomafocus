@@ -4,11 +4,20 @@ import PomafocusKit
 public struct PomodoroDashboardView: View {
     @ObservedObject private var session: PomodoroSessionController
     private let bannerText: String?
+    private let statusOverrideText: String?
+    private let statusOverrideColor: Color?
     @Environment(\.colorScheme) private var colorScheme
 
-    public init(session: PomodoroSessionController, bannerText: String? = nil) {
+    public init(
+        session: PomodoroSessionController,
+        bannerText: String? = nil,
+        statusOverrideText: String? = nil,
+        statusOverrideColor: Color? = nil
+    ) {
         self.session = session
         self.bannerText = bannerText
+        self.statusOverrideText = statusOverrideText
+        self.statusOverrideColor = statusOverrideColor
     }
 
     public var body: some View {
@@ -60,9 +69,9 @@ public struct PomodoroDashboardView: View {
                     .foregroundStyle(BrutalistColors.textPrimary)
                     .tracking(2)
 
-                Text(session.displayStateText.uppercased())
+                Text(statusText)
                     .font(BrutalistTypography.caption)
-                    .foregroundStyle(session.isRunning ? BrutalistColors.red : BrutalistColors.textSecondary)
+                    .foregroundStyle(statusColor)
                     .tracking(1)
             }
 
@@ -83,6 +92,20 @@ public struct PomodoroDashboardView: View {
             .padding(.vertical, BrutalistSpacing.xs)
             .background(BrutalistColors.red)
             .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
+    }
+
+    private var statusText: String {
+        if let statusOverrideText {
+            return statusOverrideText.uppercased()
+        }
+        return session.displayStateText.uppercased()
+    }
+
+    private var statusColor: Color {
+        if let statusOverrideColor {
+            return statusOverrideColor
+        }
+        return session.isRunning ? BrutalistColors.red : BrutalistColors.textSecondary
     }
 
     // MARK: - Timer Section

@@ -44,7 +44,7 @@ public final class PomodoroSessionController: ObservableObject {
         activeDuration == 0 ? minutes * 60 : activeDuration
     }
 
-#if canImport(Combine)
+    #if canImport(Combine)
     public enum Event {
         case started
         case stopped
@@ -52,7 +52,8 @@ public final class PomodoroSessionController: ObservableObject {
     }
 
     public let events = PassthroughSubject<Event, Never>()
-#endif
+    #endif
+    public var onExternalStart: ((PomodoroSharedState) -> Void)?
 
     private let timer: PomodoroTimer
     private let deepBreathTimer: PomodoroTimer
@@ -149,6 +150,9 @@ public final class PomodoroSessionController: ObservableObject {
         guard state.isRunning, let started = state.startedAt else {
             stopSession(shouldSync: false, outcome: nil)
             return
+        }
+        if !isRunning || currentSessionStart != started {
+            onExternalStart?(state)
         }
         minutes = max(1, state.duration / 60)
         sessionOrigin = .manual

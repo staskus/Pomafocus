@@ -17,6 +17,9 @@ final class PomafocusCore: ObservableObject {
         let store = ScheduleStore()
         self.scheduleStore = store
         self.experienceCoordinator = PomodoroExperienceCoordinator(session: session)
+        session.onExternalStart = { state in
+            PomodoroSyncNotificationManager.shared.notifyExternalStart(durationMinutes: max(1, state.duration / 60))
+        }
         self.scheduleCoordinator = ScheduleCoordinator(blocker: PomodoroBlocker.shared, store: store)
         startWidgetCommandPolling()
     }

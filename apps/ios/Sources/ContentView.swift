@@ -1,9 +1,10 @@
 import SwiftUI
+import Observation
 import PomafocusKit
 
 struct ContentView: View {
     @ObservedObject private var session: PomodoroSessionController
-    private let scheduleStore: ScheduleStore
+    @Bindable private var scheduleStore: ScheduleStore
 
     init(session: PomodoroSessionController, scheduleStore: ScheduleStore) {
         self.session = session
@@ -12,7 +13,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            PomodoroDashboardView(session: session)
+            PomodoroDashboardView(session: session, bannerText: scheduleBannerText)
                 .tabItem {
                     Label("Focus", systemImage: "timer")
                 }
@@ -27,6 +28,11 @@ struct ContentView: View {
                     Label("Schedule", systemImage: "calendar")
                 }
         }
+    }
+
+    private var scheduleBannerText: String? {
+        guard scheduleStore.activeBlock != nil else { return nil }
+        return "Schedule in progress"
     }
 }
 

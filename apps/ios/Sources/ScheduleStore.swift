@@ -11,6 +11,7 @@ final class ScheduleStore {
     var selectedScheduleID: UUID?
     var blockLists: [BlockList]
     var defaultBlockListID: UUID?
+    var activeBlock: ScheduleBlock?
 
     private let defaults: UserDefaults
     private let schedulesKey = "pomafocus.schedules"

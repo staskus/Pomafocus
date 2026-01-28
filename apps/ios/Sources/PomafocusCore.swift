@@ -17,7 +17,7 @@ final class PomafocusCore: ObservableObject {
         let store = ScheduleStore()
         self.scheduleStore = store
         self.experienceCoordinator = PomodoroExperienceCoordinator(session: session)
-        self.scheduleCoordinator = ScheduleCoordinator(session: session, blocker: PomodoroBlocker.shared, store: store)
+        self.scheduleCoordinator = ScheduleCoordinator(blocker: PomodoroBlocker.shared, store: store)
         startWidgetCommandPolling()
     }
 

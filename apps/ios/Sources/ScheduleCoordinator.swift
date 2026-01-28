@@ -4,7 +4,6 @@ import PomafocusKit
 
 @MainActor
 final class ScheduleCoordinator {
-    private let session: PomodoroSessionController
     private let blocker: PomodoroBlocker
     private let store: ScheduleStore
     private let notifier: ScheduleNotificationManager
@@ -16,12 +15,10 @@ final class ScheduleCoordinator {
     private var lastScheduleName: String?
 
     init(
-        session: PomodoroSessionController,
         blocker: PomodoroBlocker,
         store: ScheduleStore,
         notifier: ScheduleNotificationManager = .shared
     ) {
-        self.session = session
         self.blocker = blocker
         self.store = store
         self.notifier = notifier
@@ -50,55 +47,43 @@ final class ScheduleCoordinator {
         lastScheduleName = schedule?.name ?? lastScheduleName
 
         guard let schedule, isEnabled else {
-            activeBlockID = nil
-            blocker.overrideSelection = nil
-            if let lastActiveBlock {
-                notifier.notifyBlockEnd(lastActiveBlock)
-                self.lastActiveBlock = nil
-            }
-            if session.isRunning {
-                session.stopScheduledSessionIfNeeded()
-            }
+            stopActiveBlock()
             return
         }
 
         let now = Date()
         guard let block = activeBlock(in: schedule, at: now) else {
-            activeBlockID = nil
-            blocker.overrideSelection = nil
-            if let lastActiveBlock {
-                notifier.notifyBlockEnd(lastActiveBlock)
-                self.lastActiveBlock = nil
-            }
-            if session.isRunning {
-                session.stopScheduledSessionIfNeeded()
-            }
+            stopActiveBlock()
             return
         }
 
-        if session.isRunning {
-            if case .schedule(let blockID) = session.sessionOrigin, blockID == block.id {
-                return
-            }
-            return
-        }
-
-        if let lastActiveBlock, lastActiveBlock.id != block.id {
-            notifier.notifyBlockEnd(lastActiveBlock)
-        }
-        let remainingMinutes = max(1, block.endMinutes - minutesSinceMidnight(for: now))
         let selection = store.blockListSelection(for: block)
         switch block.kind {
         case .focus:
-            blocker.overrideSelection = selection
-            session.startScheduledSession(durationMinutes: remainingMinutes, tag: block.title, blockID: block.id)
+            blocker.beginScheduleBlocking(selection: selection ?? FamilyActivitySelection())
         case .break:
-            blocker.overrideSelection = FamilyActivitySelection()
-            session.startScheduledSession(durationMinutes: remainingMinutes, tag: block.title, blockID: block.id)
+            blocker.endScheduleBlocking()
+        }
+
+        if activeBlockID != block.id {
+            if let lastActiveBlock {
+                notifier.notifyBlockEnd(lastActiveBlock)
+            }
+            notifier.notifyBlockStart(block)
         }
         activeBlockID = block.id
         lastActiveBlock = block
-        notifier.notifyBlockStart(block)
+        store.activeBlock = block
+    }
+
+    private func stopActiveBlock() {
+        if let lastActiveBlock {
+            notifier.notifyBlockEnd(lastActiveBlock)
+        }
+        activeBlockID = nil
+        lastActiveBlock = nil
+        store.activeBlock = nil
+        blocker.endScheduleBlocking()
     }
 
     private func activeBlock(in schedule: FocusSchedule, at date: Date) -> ScheduleBlock? {

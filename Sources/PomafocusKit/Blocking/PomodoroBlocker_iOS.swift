@@ -11,15 +11,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     @Published public var selection: FamilyActivitySelection {
         didSet {
             persistSelection()
-            if isBlocking {
-                applyShield()
-            }
-        }
-    }
-
-    public var overrideSelection: FamilyActivitySelection? {
-        didSet {
-            if isBlocking {
+            if isBlockingActive {
                 applyShield()
             }
         }
@@ -29,7 +21,9 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     private let store = ManagedSettingsStore()
     private let defaults: UserDefaults
     private let selectionKey = "pomafocus.screenTime.selection"
-    private var isBlocking = false
+    private var sessionBlocking = false
+    private var scheduleBlocking = false
+    private var scheduleSelection = FamilyActivitySelection()
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -54,43 +48,90 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     }
 
     public func beginBlocking() {
-        guard hasSelection else { return }
-        isBlocking = true
+        sessionBlocking = true
         applyShield()
     }
 
     public func endBlocking() {
-        guard isBlocking else { return }
-        isBlocking = false
-        store.clearAllSettings()
+        guard sessionBlocking else { return }
+        sessionBlocking = false
+        applyShield()
+    }
+
+    public func beginScheduleBlocking(selection: FamilyActivitySelection) {
+        scheduleSelection = selection
+        scheduleBlocking = true
+        applyShield()
+    }
+
+    public func endScheduleBlocking() {
+        guard scheduleBlocking else { return }
+        scheduleBlocking = false
+        scheduleSelection = FamilyActivitySelection()
+        applyShield()
     }
 
     public var hasSelection: Bool {
-        !activeSelection.applicationTokens.isEmpty ||
-        !activeSelection.webDomainTokens.isEmpty ||
-        !activeSelection.categoryTokens.isEmpty
+        !selection.applicationTokens.isEmpty ||
+        !selection.webDomainTokens.isEmpty ||
+        !selection.categoryTokens.isEmpty
     }
 
     public var selectionSummary: String {
-        let apps = activeSelection.applicationTokens.count
-        let domains = activeSelection.webDomainTokens.count
-        let categories = activeSelection.categoryTokens.count
+        let apps = selection.applicationTokens.count
+        let domains = selection.webDomainTokens.count
+        let categories = selection.categoryTokens.count
         return "Apps \(apps) • Websites \(domains) • Categories \(categories)"
     }
 
     private func applyShield() {
-        guard hasSelection else {
+        let selection = effectiveSelection
+        guard hasEffectiveSelection(selection) else {
             store.clearAllSettings()
             return
         }
-        store.shield.applications = activeSelection.applicationTokens
-        store.shield.webDomains = activeSelection.webDomainTokens
-        store.shield.applicationCategories = .specific(activeSelection.categoryTokens)
-        store.shield.webDomainCategories = .specific(activeSelection.categoryTokens)
+        store.shield.applications = selection.applicationTokens
+        store.shield.webDomains = selection.webDomainTokens
+        store.shield.applicationCategories = .specific(selection.categoryTokens)
+        store.shield.webDomainCategories = .specific(selection.categoryTokens)
     }
 
-    private var activeSelection: FamilyActivitySelection {
-        overrideSelection ?? selection
+    private var isBlockingActive: Bool {
+        sessionBlocking || scheduleBlocking
+    }
+
+    private var effectiveSelection: FamilyActivitySelection {
+        var combined = FamilyActivitySelection()
+        var hasCombined = false
+        if sessionBlocking {
+            combined = selection
+            hasCombined = true
+        }
+        if scheduleBlocking {
+            if hasCombined {
+                combined = mergeSelections(primary: combined, secondary: scheduleSelection)
+            } else {
+                combined = scheduleSelection
+            }
+        }
+        return combined
+    }
+
+    private func hasEffectiveSelection(_ selection: FamilyActivitySelection) -> Bool {
+        !selection.applicationTokens.isEmpty ||
+        !selection.webDomainTokens.isEmpty ||
+        !selection.categoryTokens.isEmpty
+    }
+
+    private func mergeSelections(
+        primary: FamilyActivitySelection,
+        secondary: FamilyActivitySelection
+    ) -> FamilyActivitySelection {
+        var merged = primary
+        merged.applicationTokens.formUnion(secondary.applicationTokens)
+        merged.webDomainTokens.formUnion(secondary.webDomainTokens)
+        merged.categoryTokens.formUnion(secondary.categoryTokens)
+        return merged
     }
 
     private func persistSelection() {

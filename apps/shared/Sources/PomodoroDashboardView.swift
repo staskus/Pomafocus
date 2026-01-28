@@ -3,19 +3,16 @@ import PomafocusKit
 
 public struct PomodoroDashboardView: View {
     @ObservedObject private var session: PomodoroSessionController
-    private let bannerText: String?
     private let statusOverrideText: String?
     private let statusOverrideColor: Color?
     @Environment(\.colorScheme) private var colorScheme
 
     public init(
         session: PomodoroSessionController,
-        bannerText: String? = nil,
         statusOverrideText: String? = nil,
         statusOverrideColor: Color? = nil
     ) {
         self.session = session
-        self.bannerText = bannerText
         self.statusOverrideText = statusOverrideText
         self.statusOverrideColor = statusOverrideColor
     }
@@ -27,9 +24,6 @@ public struct PomodoroDashboardView: View {
 
             ScrollView {
                 VStack(spacing: BrutalistSpacing.lg) {
-                    if let bannerText {
-                        scheduleBanner(text: bannerText)
-                    }
                     header
                     timerSection
                     controlsSection
@@ -40,26 +34,6 @@ public struct PomodoroDashboardView: View {
     }
 
     // MARK: - Header
-
-    private func scheduleBanner(text: String) -> some View {
-        HStack(spacing: BrutalistSpacing.sm) {
-            Image(systemName: "calendar.badge.clock")
-                .foregroundStyle(BrutalistColors.textOnColor)
-            Text(text.uppercased())
-                .font(BrutalistTypography.caption)
-                .foregroundStyle(BrutalistColors.textOnColor)
-                .tracking(1)
-            Spacer()
-        }
-        .padding(.vertical, BrutalistSpacing.sm)
-        .padding(.horizontal, BrutalistSpacing.md)
-        .background(BrutalistColors.yellow)
-        .clipShape(RoundedRectangle(cornerRadius: BrutalistRadius.sm))
-        .overlay(
-            RoundedRectangle(cornerRadius: BrutalistRadius.sm)
-                .stroke(BrutalistColors.border, lineWidth: 1)
-        )
-    }
 
     private var header: some View {
         HStack(alignment: .top) {

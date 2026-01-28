@@ -15,7 +15,6 @@ struct ContentView: View {
         TabView {
             PomodoroDashboardView(
                 session: session,
-                bannerText: scheduleBannerText,
                 statusOverrideText: scheduleStatusText,
                 statusOverrideColor: scheduleStatusColor
             )
@@ -33,11 +32,6 @@ struct ContentView: View {
                     Label("Schedule", systemImage: "calendar")
                 }
         }
-    }
-
-    private var scheduleBannerText: String? {
-        guard scheduleStore.activeBlock != nil else { return nil }
-        return "Schedule in progress"
     }
 
     private var scheduleStatusText: String? {

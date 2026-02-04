@@ -13,7 +13,9 @@ import Testing
             openURL: { url in
                 openedHosts.append(url.host ?? "")
                 return true
-            }
+            },
+            canOpenCommandURL: { _ in true },
+            launchCompanionApp: { false }
         )
 
         blocker.beginBlocking()
@@ -35,10 +37,34 @@ import Testing
     @Test func reportsFailureWhenURLCommandCannotBeOpened() {
         let blocker = PomodoroBlocker(
             defaults: isolatedDefaults(),
-            openURL: { _ in false }
+            openURL: { _ in false },
+            canOpenCommandURL: { _ in true },
+            launchCompanionApp: { false }
         )
         blocker.setScreenTimeCompanionEnabled(true)
         #expect(blocker.openScreenTimeSettings() == false)
+    }
+
+    @Test func launchesCompanionWhenCustomURLSchemeUnavailable() {
+        var launchCount = 0
+        let blocker = PomodoroBlocker(
+            defaults: isolatedDefaults(),
+            openURL: { _ in
+                Issue.record("openURL should not be called when command URL has no handler")
+                return false
+            },
+            canOpenCommandURL: { _ in false },
+            launchCompanionApp: {
+                launchCount += 1
+                return true
+            }
+        )
+
+        blocker.setScreenTimeCompanionEnabled(true)
+        blocker.beginBlocking()
+        blocker.openScreenTimeSettings()
+
+        #expect(launchCount == 2)
     }
 
     private func isolatedDefaults() -> UserDefaults {

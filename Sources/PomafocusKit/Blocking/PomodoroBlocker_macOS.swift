@@ -10,6 +10,8 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     private let commandURLBase = "pomafocus://"
     private let companionBundleID = "com.povilasstaskus.pomafocus.ios"
     private let openURL: (URL) -> Bool
+    private let canOpenCommandURL: (URL) -> Bool
+    private let launchCompanionApp: () -> Bool
 
     private enum Keys {
         static let screenTimeCompanionEnabled = "pomodoro.screenTimeCompanionEnabled"
@@ -19,10 +21,22 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
 
     init(
         defaults: UserDefaults = .standard,
-        openURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
+        openURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
+        canOpenCommandURL: @escaping (URL) -> Bool = { url in
+            NSWorkspace.shared.urlForApplication(toOpen: url) != nil
+        },
+        launchCompanionApp: @escaping () -> Bool = {
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.povilasstaskus.pomafocus.ios") else {
+                return false
+            }
+            NSWorkspace.shared.openApplication(at: appURL, configuration: .init(), completionHandler: nil)
+            return true
+        }
     ) {
         self.defaults = defaults
         self.openURL = openURL
+        self.canOpenCommandURL = canOpenCommandURL
+        self.launchCompanionApp = launchCompanionApp
         screenTimeCompanionEnabled = defaults.bool(forKey: Keys.screenTimeCompanionEnabled)
     }
 
@@ -63,7 +77,10 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         guard let url = URL(string: "\(commandURLBase)\(command)") else {
             return false
         }
-        return openURL(url)
+        if canOpenCommandURL(url) {
+            return openURL(url)
+        }
+        return launchCompanionApp()
     }
 }
 #endif

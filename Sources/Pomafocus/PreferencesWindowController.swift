@@ -7,7 +7,9 @@ final class PreferencesWindowController: NSWindowController {
     private let minutesField = NSTextField(string: "")
     private lazy var hotkeyField: HotkeyField = HotkeyField(hotkey: currentSnapshot.hotkey)
     private let deepBreathCheckbox = NSButton(checkboxWithTitle: "Require a 30-second deep breath before stopping", target: nil, action: nil)
-    private let blockedSitesView = NSTextView()
+    private let screenTimeCheckbox = NSButton(checkboxWithTitle: "Use Screen Time companion app for blocking", target: nil, action: nil)
+    private let screenTimeStatusLabel = NSTextField(labelWithString: "")
+    private let openScreenTimeButton = NSButton(title: "Open Screen Time Selection", target: nil, action: nil)
     private let blocker = PomodoroBlocker.shared
     private var currentSnapshot: PomodoroSettings.Snapshot
 
@@ -32,7 +34,7 @@ final class PreferencesWindowController: NSWindowController {
 
     private func setupWindow() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -61,13 +63,17 @@ final class PreferencesWindowController: NSWindowController {
             return formatter
         }()
 
-        configureSitesView(blockedSitesView)
-
         hotkeyField.onChange = { [weak self] hotkey in
             self?.currentSnapshot.hotkey = hotkey
         }
         deepBreathCheckbox.target = self
         deepBreathCheckbox.action = #selector(toggleDeepBreath(_:))
+        screenTimeCheckbox.target = self
+        screenTimeCheckbox.action = #selector(toggleScreenTimeCompanion(_:))
+        openScreenTimeButton.target = self
+        openScreenTimeButton.action = #selector(openScreenTimeSelection)
+        openScreenTimeButton.bezelStyle = .rounded
+        screenTimeStatusLabel.textColor = .secondaryLabelColor
     }
 
     private func buildLayout(in window: NSWindow) {
@@ -80,20 +86,18 @@ final class PreferencesWindowController: NSWindowController {
 
         let minutesLabel = NSTextField(labelWithString: "Session length (minutes)")
         let hotkeyLabel = NSTextField(labelWithString: "Global shortcut")
-        let blockedSitesLabel = NSTextField(labelWithString: "Blocked websites (one per line)")
         let saveButton = NSButton(title: "Save", target: self, action: #selector(savePreferences))
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r"
-
-        let blockedSitesScrollView = makeSitesScrollView(for: blockedSitesView)
 
         stack.addArrangedSubview(minutesLabel)
         stack.addArrangedSubview(minutesField)
         stack.addArrangedSubview(hotkeyLabel)
         stack.addArrangedSubview(hotkeyField)
         stack.addArrangedSubview(deepBreathCheckbox)
-        stack.addArrangedSubview(blockedSitesLabel)
-        stack.addArrangedSubview(blockedSitesScrollView)
+        stack.addArrangedSubview(screenTimeCheckbox)
+        stack.addArrangedSubview(screenTimeStatusLabel)
+        stack.addArrangedSubview(openScreenTimeButton)
         stack.addArrangedSubview(NSView())
         stack.addArrangedSubview(saveButton)
 
@@ -110,7 +114,8 @@ final class PreferencesWindowController: NSWindowController {
         minutesField.stringValue = "\(currentSnapshot.minutes)"
         hotkeyField.hotkey = currentSnapshot.hotkey
         deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
-        blockedSitesView.string = blocker.blockedDomainsText
+        screenTimeCheckbox.state = blocker.screenTimeCompanionEnabled ? .on : .off
+        updateScreenTimeStatus(enabled: blocker.screenTimeCompanionEnabled)
     }
 
     func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
@@ -123,7 +128,7 @@ final class PreferencesWindowController: NSWindowController {
     @objc private func savePreferences() {
         let minutesValue = Int(minutesField.stringValue) ?? currentSnapshot.minutes
         currentSnapshot.minutes = max(1, minutesValue)
-        blocker.updateBlockedDomainsText(blockedSitesView.string)
+        blocker.setScreenTimeCompanionEnabled(screenTimeCheckbox.state == .on)
         onUpdate(currentSnapshot)
         window?.close()
     }
@@ -132,26 +137,28 @@ final class PreferencesWindowController: NSWindowController {
         currentSnapshot.deepBreathEnabled = sender.state == .on
     }
 
-    private func configureSitesView(_ view: NSTextView) {
-        view.isVerticallyResizable = true
-        view.isHorizontallyResizable = false
-        view.textContainer?.widthTracksTextView = true
-        view.textContainer?.heightTracksTextView = false
-        view.isEditable = true
-        view.isRichText = false
-        view.isAutomaticQuoteSubstitutionEnabled = false
-        view.isAutomaticTextReplacementEnabled = false
-        view.isAutomaticDashSubstitutionEnabled = false
-        view.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+    @objc private func toggleScreenTimeCompanion(_ sender: NSButton) {
+        updateScreenTimeStatus(enabled: sender.state == .on)
     }
 
-    private func makeSitesScrollView(for textView: NSTextView) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.hasVerticalScroller = true
-        scrollView.borderType = .bezelBorder
-        scrollView.documentView = textView
-        scrollView.heightAnchor.constraint(equalToConstant: 120).isActive = true
-        return scrollView
+    @objc private func openScreenTimeSelection() {
+        guard blocker.openScreenTimeSettings() else {
+            let alert = NSAlert()
+            alert.messageText = "Unable to open companion app"
+            alert.informativeText = "Install or launch the iOS/Catalyst Pomafocus app on this Mac, then try again."
+            alert.runModal()
+            return
+        }
+    }
+
+    private func updateScreenTimeStatus(enabled: Bool) {
+        openScreenTimeButton.isEnabled = enabled
+        if enabled {
+            screenTimeStatusLabel.stringValue = blocker.isCompanionInstalled
+                ? "When focus starts, Pomafocus asks the companion app to enforce Screen Time blocking."
+                : "Companion app not found. Install/open the iOS/Catalyst Pomafocus app on this Mac."
+        } else {
+            screenTimeStatusLabel.stringValue = "Companion integration is disabled."
+        }
     }
 }

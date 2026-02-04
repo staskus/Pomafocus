@@ -29,8 +29,25 @@ struct PomafocusiOSApp: App {
             }
         case "toggle":
             core.session.toggleTimer()
+        case "block-on":
+            Task { await updateScreenTimeBlocking(enabled: true) }
+        case "block-off":
+            Task { await updateScreenTimeBlocking(enabled: false) }
+        case "screen-time":
+            NotificationCenter.default.post(name: .pomafocusOpenScreenTimeSettings, object: nil)
         default:
             break
+        }
+    }
+
+    private func updateScreenTimeBlocking(enabled: Bool) async {
+        let blocker = PomodoroBlocker.shared
+        let authorized = await blocker.ensureAuthorization()
+        guard authorized else { return }
+        if enabled {
+            blocker.beginBlocking()
+        } else {
+            blocker.endBlocking()
         }
     }
 }

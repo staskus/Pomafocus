@@ -54,6 +54,9 @@ struct PlatformBlockingPanel: View {
         .sheet(isPresented: $showingScreenTime) {
             ScreenTimeSettingsView()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .pomafocusOpenScreenTimeSettings)) { _ in
+            showingScreenTime = true
+        }
         .allowsHitTesting(!isDisabled)
     }
 

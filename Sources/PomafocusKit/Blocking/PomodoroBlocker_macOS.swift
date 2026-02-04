@@ -1,143 +1,69 @@
 #if os(macOS)
+import AppKit
 import Foundation
 
 @MainActor
 public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     public static let shared = PomodoroBlocker()
 
-    private let defaults = UserDefaults.standard
-    private let hostsPath = "/etc/hosts"
-    private let blockStartMarker = "# Pomafocus Block Start"
-    private let blockEndMarker = "# Pomafocus Block End"
-    private let blockAddress = "127.0.0.1"
-    private let workQueue = DispatchQueue(label: "com.staskus.pomafocus.blocking", qos: .utility)
-
-    private var blockedDomains: [String] = []
+    private let defaults: UserDefaults
+    private let commandURLBase = "pomafocus://"
+    private let companionBundleID = "com.povilasstaskus.pomafocus.ios"
+    private let openURL: (URL) -> Bool
 
     private enum Keys {
-        static let blockedDomains = "pomodoro.blockedDomains"
+        static let screenTimeCompanionEnabled = "pomodoro.screenTimeCompanionEnabled"
     }
 
-    public private(set) var blockedDomainsText: String
+    public private(set) var screenTimeCompanionEnabled: Bool
 
-    private init() {
-        blockedDomainsText = defaults.string(forKey: Keys.blockedDomains) ?? ""
-        blockedDomains = parseDomains(from: blockedDomainsText)
+    init(
+        defaults: UserDefaults = .standard,
+        openURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    ) {
+        self.defaults = defaults
+        self.openURL = openURL
+        screenTimeCompanionEnabled = defaults.bool(forKey: Keys.screenTimeCompanionEnabled)
     }
 
-    public func updateBlockedDomainsText(_ text: String) {
-        blockedDomainsText = text
-        defaults.set(text, forKey: Keys.blockedDomains)
-        blockedDomains = parseDomains(from: text)
+    public func setScreenTimeCompanionEnabled(_ enabled: Bool) {
+        screenTimeCompanionEnabled = enabled
+        defaults.set(enabled, forKey: Keys.screenTimeCompanionEnabled)
     }
 
     public func beginBlocking() {
-        applyBlocking(enabled: true)
+        guard screenTimeCompanionEnabled else { return }
+        _ = sendCompanionCommand("block-on")
     }
 
     public func endBlocking() {
-        applyBlocking(enabled: false)
+        guard screenTimeCompanionEnabled else { return }
+        _ = sendCompanionCommand("block-off")
     }
 
-    public var hasSelection: Bool { !blockedDomains.isEmpty }
+    @discardableResult
+    public func openScreenTimeSettings() -> Bool {
+        sendCompanionCommand("screen-time")
+    }
+
+    public var isCompanionInstalled: Bool {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: companionBundleID) != nil
+    }
+
+    public var hasSelection: Bool {
+        screenTimeCompanionEnabled
+    }
 
     public var selectionSummary: String {
-        if blockedDomains.isEmpty {
-            return "No websites blocked"
-        }
-        return "Blocking \(blockedDomains.count) website\(blockedDomains.count == 1 ? "" : "s")"
+        screenTimeCompanionEnabled ? "Screen Time via companion app" : "Screen Time companion disabled"
     }
 
-    private func applyBlocking(enabled: Bool) {
-        let domains = blockedDomains
-        let hostsPath = hostsPath
-        let blockStartMarker = blockStartMarker
-        let blockEndMarker = blockEndMarker
-        let blockAddress = blockAddress
-        workQueue.async {
-            guard let originalHosts = try? String(contentsOfFile: hostsPath, encoding: .utf8) else { return }
-            let sanitizedHosts = Self.removeBlockSection(from: originalHosts, startMarker: blockStartMarker, endMarker: blockEndMarker)
-            var updatedHosts = sanitizedHosts
-
-            if enabled, !domains.isEmpty {
-                if !updatedHosts.hasSuffix("\n"), !updatedHosts.isEmpty {
-                    updatedHosts.append("\n")
-                }
-                updatedHosts.append(blockStartMarker)
-                updatedHosts.append("\n")
-                updatedHosts.append(domains.map { "\(blockAddress) \($0)" }.joined(separator: "\n"))
-                updatedHosts.append("\n")
-                updatedHosts.append(blockEndMarker)
-                updatedHosts.append("\n")
-            }
-
-            DispatchQueue.main.async {
-                PrivilegedHelperManager.shared.applyHosts(updatedHosts) { success, message in
-                    if !success, let message {
-                        NSLog("Pomafocus: failed to update /etc/hosts: \(message)")
-                    }
-                }
-            }
+    @discardableResult
+    private func sendCompanionCommand(_ command: String) -> Bool {
+        guard let url = URL(string: "\(commandURLBase)\(command)") else {
+            return false
         }
+        return openURL(url)
     }
-
-    nonisolated private static func removeBlockSection(from hosts: String, startMarker: String, endMarker: String) -> String {
-        var output: [String] = []
-        var skipping = false
-        for line in hosts.split(whereSeparator: \.isNewline) {
-            if line == startMarker {
-                skipping = true
-                continue
-            }
-            if line == endMarker {
-                skipping = false
-                continue
-            }
-            if !skipping {
-                output.append(String(line))
-            }
-        }
-        return output.joined(separator: "\n") + "\n"
-    }
-
-
-    private func parseDomains(from text: String) -> [String] {
-        let separators = CharacterSet(charactersIn: ", \t\r\n")
-        var seen = Set<String>()
-        var results: [String] = []
-
-        for raw in text.components(separatedBy: separators) {
-            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-
-            var token = trimmed.lowercased()
-            if token.hasPrefix("http://") {
-                token.removeFirst("http://".count)
-            } else if token.hasPrefix("https://") {
-                token.removeFirst("https://".count)
-            }
-            if let slashIndex = token.firstIndex(of: "/") {
-                token = String(token[..<slashIndex])
-            }
-            if let colonIndex = token.firstIndex(of: ":") {
-                token = String(token[..<colonIndex])
-            }
-            guard !token.isEmpty else { continue }
-
-            if seen.insert(token).inserted {
-                results.append(token)
-            }
-
-            let parts = token.split(separator: ".")
-            if parts.count == 2 && !token.hasPrefix("www.") {
-                let www = "www.\(token)"
-                if seen.insert(www).inserted {
-                    results.append(www)
-                }
-            }
-        }
-        return results
-    }
-
 }
 #endif

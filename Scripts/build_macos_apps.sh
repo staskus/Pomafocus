@@ -31,7 +31,16 @@ fi
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/PomafocusMac.app"
-cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/Pomafocus.app"
+
+# Build a lightweight launcher app that opens the companion iOS app on macOS.
+LAUNCHER_APP="$DIST_DIR/Pomafocus.app"
+rm -rf "$LAUNCHER_APP"
+osacompile -o "$LAUNCHER_APP" <<'APPLESCRIPT'
+set exitCode to do shell script "/usr/bin/open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1; echo $?"
+if exitCode is not "0" then
+  display dialog "Companion app not found. Install Pomafocus iOS app on this Mac from the App Store/TestFlight, then try again." buttons {"OK"} default button "OK" with icon caution
+end if
+APPLESCRIPT
 
 cat > "$DIST_DIR/OpenPomafocusApps.command" <<'SCRIPT'
 #!/bin/zsh
@@ -44,18 +53,12 @@ if [[ -d "$HERE/PomafocusMac.app" ]]; then
   open "$HERE/PomafocusMac.app"
 fi
 
-# Try to launch companion app if installed on this Mac.
-if open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1; then
-  exit 0
-fi
-
-# Fallback: launch local Pomafocus.app if present.
 if [[ -d "$HERE/Pomafocus.app" ]]; then
   open "$HERE/Pomafocus.app"
   exit 0
 fi
 
-echo "Companion app is not installed. Installed app bundle id expected: com.povilasstaskus.pomafocus.ios"
+echo "Missing launcher app at $HERE/Pomafocus.app"
 exit 1
 SCRIPT
 chmod +x "$DIST_DIR/OpenPomafocusApps.command"

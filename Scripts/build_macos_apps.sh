@@ -5,9 +5,6 @@ ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 DIST_DIR="$ROOT_DIR/dist/macos"
 DOWNLOADS_DIR="$HOME/Downloads/Pomafocus-Builds"
 
-echo "Building Pomafocus.app (standalone)..."
-"$ROOT_DIR/Scripts/build_app.sh"
-
 echo "Building PomafocusMac.app (status bar app)..."
 xcodebuild \
   -workspace "$ROOT_DIR/apps/Pomafocus.xcworkspace" \
@@ -33,29 +30,33 @@ fi
 
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
-cp -R "$ROOT_DIR/dist/Pomafocus.app" "$DIST_DIR/Pomafocus.app"
 cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/PomafocusMac.app"
+cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/Pomafocus.app"
 
 cat > "$DIST_DIR/OpenPomafocusApps.command" <<'SCRIPT'
 #!/bin/zsh
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-APPS=("Pomafocus.app" "PomafocusMac.app")
-opened=0
 
-for app in "${APPS[@]}"; do
-  app_path="$HERE/$app"
-  if [[ -d "$app_path" ]]; then
-    open "$app_path"
-    opened=1
-  fi
-done
-
-if [[ $opened -eq 0 ]]; then
-  echo "No app bundles found next to this launcher."
-  exit 1
+# Always launch the macOS status bar app.
+if [[ -d "$HERE/PomafocusMac.app" ]]; then
+  open "$HERE/PomafocusMac.app"
 fi
+
+# Try to launch companion app if installed on this Mac.
+if open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Fallback: launch local Pomafocus.app if present.
+if [[ -d "$HERE/Pomafocus.app" ]]; then
+  open "$HERE/Pomafocus.app"
+  exit 0
+fi
+
+echo "Companion app is not installed. Installed app bundle id expected: com.povilasstaskus.pomafocus.ios"
+exit 1
 SCRIPT
 chmod +x "$DIST_DIR/OpenPomafocusApps.command"
 

@@ -36,10 +36,10 @@ cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/PomafocusMac.app"
 LAUNCHER_APP="$DIST_DIR/Pomafocus.app"
 rm -rf "$LAUNCHER_APP"
 osacompile -o "$LAUNCHER_APP" <<'APPLESCRIPT'
-set exitCode to do shell script "/usr/bin/open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1; echo $?"
-if exitCode is not "0" then
-  display dialog "Companion app not found. Install Pomafocus iOS app on this Mac from the App Store/TestFlight, then try again." buttons {"OK"} default button "OK" with icon caution
-end if
+set scriptDir to POSIX path of ((path to me as text) & "::")
+set statusBarApp to quoted form of (scriptDir & "PomafocusMac.app")
+do shell script "/usr/bin/open " & statusBarApp
+do shell script "/usr/bin/open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1 || true"
 APPLESCRIPT
 
 cat > "$DIST_DIR/OpenPomafocusApps.command" <<'SCRIPT'

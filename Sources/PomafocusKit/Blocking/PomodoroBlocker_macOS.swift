@@ -96,7 +96,16 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         if openCommandWithCompanion(url) {
             return true
         }
-        return launchCompanionApp()
+        guard launchCompanionApp() else {
+            return false
+        }
+        if openCommandWithCompanion(url) {
+            return true
+        }
+        if canOpenCommandURL(url) {
+            return openURL(url)
+        }
+        return false
     }
 }
 #endif

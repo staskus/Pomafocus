@@ -70,6 +70,34 @@ import Testing
         #expect(launchCount == 2)
     }
 
+    @Test func retriesCommandAfterLaunchingCompanion() {
+        var launchCount = 0
+        var commandAttemptCount = 0
+        let blocker = PomodoroBlocker(
+            defaults: isolatedDefaults(),
+            openURL: { _ in
+                Issue.record("openURL should not be called in this path")
+                return false
+            },
+            canOpenCommandURL: { _ in false },
+            openCommandWithCompanion: { _ in
+                commandAttemptCount += 1
+                return commandAttemptCount > 1
+            },
+            launchCompanionApp: {
+                launchCount += 1
+                return true
+            }
+        )
+
+        blocker.setScreenTimeCompanionEnabled(true)
+        let opened = blocker.openScreenTimeSettings()
+
+        #expect(opened == true)
+        #expect(launchCount == 1)
+        #expect(commandAttemptCount == 2)
+    }
+
     @Test func usesCompanionBundleToOpenCommandWhenSchemeHasNoGlobalHandler() {
         var receivedHosts: [String] = []
         let blocker = PomodoroBlocker(

@@ -7,9 +7,9 @@ final class PreferencesWindowController: NSWindowController {
     private let minutesField = NSTextField(string: "")
     private lazy var hotkeyField: HotkeyField = HotkeyField(hotkey: currentSnapshot.hotkey)
     private let deepBreathCheckbox = NSButton(checkboxWithTitle: "Require a 30-second deep breath before stopping", target: nil, action: nil)
-    private let screenTimeCheckbox = NSButton(checkboxWithTitle: "Use Screen Time companion app for blocking", target: nil, action: nil)
+    private let screenTimeCheckbox = NSButton(checkboxWithTitle: "Use Screen Time for blocking (requires Pomafocus iOS on this Mac)", target: nil, action: nil)
     private let screenTimeStatusLabel = NSTextField(labelWithString: "")
-    private let openScreenTimeButton = NSButton(title: "Open Screen Time Selection", target: nil, action: nil)
+    private let openScreenTimeButton = NSButton(title: "Open Screen Time Setup", target: nil, action: nil)
     private let blocker = PomodoroBlocker.shared
     private var currentSnapshot: PomodoroSettings.Snapshot
 

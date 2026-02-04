@@ -145,7 +145,7 @@ final class PreferencesWindowController: NSWindowController {
         guard blocker.openScreenTimeSettings() else {
             let alert = NSAlert()
             alert.messageText = "Unable to open companion app"
-            alert.informativeText = "Install or launch the iOS/Catalyst Pomafocus app on this Mac, then try again."
+            alert.informativeText = "Install Pomafocus iOS on this Mac from the App Store/TestFlight, launch it once, then try again."
             alert.runModal()
             return
         }
@@ -156,7 +156,7 @@ final class PreferencesWindowController: NSWindowController {
         if enabled {
             screenTimeStatusLabel.stringValue = blocker.isCompanionInstalled
                 ? "When focus starts, Pomafocus asks the companion app to enforce Screen Time blocking."
-                : "Companion app not found. Install/open the iOS/Catalyst Pomafocus app on this Mac."
+                : "Companion app not found. Install Pomafocus iOS on this Mac and launch it once."
         } else {
             screenTimeStatusLabel.stringValue = "Companion integration is disabled."
         }

@@ -11,6 +11,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     private let companionBundleID = "com.povilasstaskus.pomafocus.ios"
     private let openURL: (URL) -> Bool
     private let canOpenCommandURL: (URL) -> Bool
+    private let openCommandWithCompanion: (URL) -> Bool
     private let launchCompanionApp: () -> Bool
 
     private enum Keys {
@@ -25,6 +26,17 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         canOpenCommandURL: @escaping (URL) -> Bool = { url in
             NSWorkspace.shared.urlForApplication(toOpen: url) != nil
         },
+        openCommandWithCompanion: @escaping (URL) -> Bool = { url in
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.povilasstaskus.pomafocus.ios") else {
+                return false
+            }
+            NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: .init()) { _, error in
+                if let error {
+                    NSLog("Failed to open companion command URL: %@", error.localizedDescription)
+                }
+            }
+            return true
+        },
         launchCompanionApp: @escaping () -> Bool = {
             guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.povilasstaskus.pomafocus.ios") else {
                 return false
@@ -36,6 +48,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         self.defaults = defaults
         self.openURL = openURL
         self.canOpenCommandURL = canOpenCommandURL
+        self.openCommandWithCompanion = openCommandWithCompanion
         self.launchCompanionApp = launchCompanionApp
         screenTimeCompanionEnabled = defaults.bool(forKey: Keys.screenTimeCompanionEnabled)
     }
@@ -79,6 +92,9 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         }
         if canOpenCommandURL(url) {
             return openURL(url)
+        }
+        if openCommandWithCompanion(url) {
+            return true
         }
         return launchCompanionApp()
     }

@@ -21,7 +21,7 @@ The scheme builds the familiar status-item app using the sources in `Sources/Pom
 
 This produces:
 - `dist/macos/PomafocusMac.app` (the actual status bar app)
-- `dist/macos/OpenPomafocus.command` (launcher that opens `PomafocusMac.app` and the optional companion app if installed)
+- `dist/macos/OpenPomafocus.command` (launcher that opens `PomafocusMac.app` and optionally the companion iOS app if installed)
 
 The same files are copied to `~/Downloads/Pomafocus-Builds`.
 

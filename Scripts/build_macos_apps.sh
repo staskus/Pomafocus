@@ -39,7 +39,6 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 open "$HERE/PomafocusMac.app"
-# Optional: open companion app if installed on this Mac.
 open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1 || true
 SCRIPT
 chmod +x "$DIST_DIR/OpenPomafocus.command"

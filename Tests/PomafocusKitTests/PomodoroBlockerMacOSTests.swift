@@ -15,6 +15,7 @@ import Testing
                 return true
             },
             canOpenCommandURL: { _ in true },
+            openCommandWithCompanion: { _ in false },
             launchCompanionApp: { false }
         )
 
@@ -39,6 +40,7 @@ import Testing
             defaults: isolatedDefaults(),
             openURL: { _ in false },
             canOpenCommandURL: { _ in true },
+            openCommandWithCompanion: { _ in false },
             launchCompanionApp: { false }
         )
         blocker.setScreenTimeCompanionEnabled(true)
@@ -54,6 +56,7 @@ import Testing
                 return false
             },
             canOpenCommandURL: { _ in false },
+            openCommandWithCompanion: { _ in false },
             launchCompanionApp: {
                 launchCount += 1
                 return true
@@ -65,6 +68,32 @@ import Testing
         blocker.openScreenTimeSettings()
 
         #expect(launchCount == 2)
+    }
+
+    @Test func usesCompanionBundleToOpenCommandWhenSchemeHasNoGlobalHandler() {
+        var receivedHosts: [String] = []
+        let blocker = PomodoroBlocker(
+            defaults: isolatedDefaults(),
+            openURL: { _ in
+                Issue.record("openURL should not be called when command URL has no global handler")
+                return false
+            },
+            canOpenCommandURL: { _ in false },
+            openCommandWithCompanion: { url in
+                receivedHosts.append(url.host ?? "")
+                return true
+            },
+            launchCompanionApp: {
+                Issue.record("launchCompanionApp should not run when opening URL via companion succeeds")
+                return false
+            }
+        )
+
+        blocker.setScreenTimeCompanionEnabled(true)
+        blocker.beginBlocking()
+        blocker.endBlocking()
+
+        #expect(receivedHosts == ["block-on", "block-off"])
     }
 
     private func isolatedDefaults() -> UserDefaults {

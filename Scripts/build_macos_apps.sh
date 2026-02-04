@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 DIST_DIR="$ROOT_DIR/dist/macos"
 DOWNLOADS_DIR="$HOME/Downloads/Pomafocus-Builds"
+BUILD_LOG="/tmp/pomafocus_macos_build.log"
 
 echo "Building PomafocusMac.app (status bar app)..."
 xcodebuild \
@@ -11,7 +12,7 @@ xcodebuild \
   -scheme PomafocusMac \
   -configuration Release \
   -destination "platform=macOS" \
-  build > /tmp/pomafocus_macos_build.log
+  build > "$BUILD_LOG"
 
 BUILD_SETTINGS=$(xcodebuild \
   -workspace "$ROOT_DIR/apps/Pomafocus.xcworkspace" \
@@ -32,47 +33,25 @@ rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 cp -R "$STATUS_APP_SOURCE" "$DIST_DIR/PomafocusMac.app"
 
-# Build a lightweight launcher app that opens the companion iOS app on macOS.
-LAUNCHER_APP="$DIST_DIR/Pomafocus.app"
-rm -rf "$LAUNCHER_APP"
-osacompile -o "$LAUNCHER_APP" <<'APPLESCRIPT'
-set scriptDir to POSIX path of ((path to me as text) & "::")
-set statusBarApp to quoted form of (scriptDir & "PomafocusMac.app")
-do shell script "/usr/bin/open " & statusBarApp
-do shell script "/usr/bin/open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1 || true"
-APPLESCRIPT
-
-cat > "$DIST_DIR/OpenPomafocusApps.command" <<'SCRIPT'
+cat > "$DIST_DIR/OpenPomafocus.command" <<'SCRIPT'
 #!/bin/zsh
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-
-# Always launch the macOS status bar app.
-if [[ -d "$HERE/PomafocusMac.app" ]]; then
-  open "$HERE/PomafocusMac.app"
-fi
-
-if [[ -d "$HERE/Pomafocus.app" ]]; then
-  open "$HERE/Pomafocus.app"
-  exit 0
-fi
-
-echo "Missing launcher app at $HERE/Pomafocus.app"
-exit 1
+open "$HERE/PomafocusMac.app"
+# Optional: open companion app if installed on this Mac.
+open -b com.povilasstaskus.pomafocus.ios >/dev/null 2>&1 || true
 SCRIPT
-chmod +x "$DIST_DIR/OpenPomafocusApps.command"
+chmod +x "$DIST_DIR/OpenPomafocus.command"
 
 rm -rf "$DOWNLOADS_DIR"
 mkdir -p "$DOWNLOADS_DIR"
-cp -R "$DIST_DIR/Pomafocus.app" "$DOWNLOADS_DIR/Pomafocus.app"
 cp -R "$DIST_DIR/PomafocusMac.app" "$DOWNLOADS_DIR/PomafocusMac.app"
-cp "$DIST_DIR/OpenPomafocusApps.command" "$DOWNLOADS_DIR/OpenPomafocusApps.command"
+cp "$DIST_DIR/OpenPomafocus.command" "$DOWNLOADS_DIR/OpenPomafocus.command"
 
-echo "Built apps and launcher:"
-echo "  $DIST_DIR/Pomafocus.app"
+echo "Built macOS artifacts:"
 echo "  $DIST_DIR/PomafocusMac.app"
-echo "  $DIST_DIR/OpenPomafocusApps.command"
+echo "  $DIST_DIR/OpenPomafocus.command"
 echo
 echo "Copied to:"
 echo "  $DOWNLOADS_DIR"

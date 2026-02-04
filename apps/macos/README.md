@@ -13,6 +13,18 @@ open apps/macos/PomafocusMac.xcodeproj
 
 The scheme builds the familiar status-item app using the sources in `Sources/Pomafocus` while linking against `PomafocusKit`. Use this project if you want an app target inside Xcode instead of the plain Swift Package workflow.
 
-## Website blocking
+## Build distributable artifacts
 
-Open the Preferences window from the status item to enter the list of domains you want blocked whenever a focus session is running on macOS. The app updates `/etc/hosts` under the hood, so macOS will prompt for administrator access the first time you start a session with website blocking enabled. When a session stops, the entries are removed automatically.
+```bash
+./Scripts/build_macos_apps.sh
+```
+
+This produces:
+- `dist/macos/PomafocusMac.app` (the actual status bar app)
+- `dist/macos/OpenPomafocus.command` (launcher that opens `PomafocusMac.app` and the optional companion app if installed)
+
+The same files are copied to `~/Downloads/Pomafocus-Builds`.
+
+## Screen Time blocking on macOS
+
+Native macOS cannot enforce iOS-style FamilyControls/ManagedSettings shielding directly. PomafocusMac therefore delegates Screen Time blocking to the companion iOS app when available.

@@ -26,6 +26,12 @@ cp "$ROOT_DIR/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
 chmod +x "$CONTENTS_DIR/MacOS/$PRODUCT_NAME"
 
+# Replace build-setting placeholders for standalone bundle usage.
+/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $PRODUCT_NAME" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.staskus.pomafocus" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleName $PRODUCT_NAME" "$CONTENTS_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $PRODUCT_NAME" "$CONTENTS_DIR/Info.plist"
+
 cat <<'PLIST' > "$APP_DIR/Contents/PkgInfo"
 APPL????
 PLIST

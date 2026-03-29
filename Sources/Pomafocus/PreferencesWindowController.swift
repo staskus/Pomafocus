@@ -7,9 +7,10 @@ final class PreferencesWindowController: NSWindowController {
     private let minutesField = NSTextField(string: "")
     private lazy var hotkeyField: HotkeyField = HotkeyField(hotkey: currentSnapshot.hotkey)
     private let deepBreathCheckbox = NSButton(checkboxWithTitle: "Require a 30-second deep breath before stopping", target: nil, action: nil)
-    private let screenTimeCheckbox = NSButton(checkboxWithTitle: "Use Screen Time for blocking (requires Pomafocus iOS on this Mac)", target: nil, action: nil)
-    private let screenTimeStatusLabel = NSTextField(labelWithString: "")
-    private let openScreenTimeButton = NSButton(title: "Open Screen Time Setup", target: nil, action: nil)
+    private let domainField = NSTextField(string: "")
+    private let addDomainButton = NSButton(title: "Add", target: nil, action: nil)
+    private let domainListLabel = NSTextField(labelWithString: "")
+    private let clearDomainsButton = NSButton(title: "Clear All", target: nil, action: nil)
     private let blocker = PomodoroBlocker.shared
     private var currentSnapshot: PomodoroSettings.Snapshot
 
@@ -34,7 +35,7 @@ final class PreferencesWindowController: NSWindowController {
 
     private func setupWindow() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 400),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -68,12 +69,20 @@ final class PreferencesWindowController: NSWindowController {
         }
         deepBreathCheckbox.target = self
         deepBreathCheckbox.action = #selector(toggleDeepBreath(_:))
-        screenTimeCheckbox.target = self
-        screenTimeCheckbox.action = #selector(toggleScreenTimeCompanion(_:))
-        openScreenTimeButton.target = self
-        openScreenTimeButton.action = #selector(openScreenTimeSelection)
-        openScreenTimeButton.bezelStyle = .rounded
-        screenTimeStatusLabel.textColor = .secondaryLabelColor
+
+        domainField.placeholderString = "example.com"
+        domainField.focusRingType = .none
+        addDomainButton.target = self
+        addDomainButton.action = #selector(addDomain)
+        addDomainButton.bezelStyle = .rounded
+        clearDomainsButton.target = self
+        clearDomainsButton.action = #selector(clearDomains)
+        clearDomainsButton.bezelStyle = .rounded
+
+        domainListLabel.maximumNumberOfLines = 0
+        domainListLabel.preferredMaxLayoutWidth = 380
+        domainListLabel.textColor = .secondaryLabelColor
+        domainListLabel.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
     }
 
     private func buildLayout(in window: NSWindow) {
@@ -86,6 +95,14 @@ final class PreferencesWindowController: NSWindowController {
 
         let minutesLabel = NSTextField(labelWithString: "Session length (minutes)")
         let hotkeyLabel = NSTextField(labelWithString: "Global shortcut")
+
+        let blockingLabel = NSTextField(labelWithString: "Website Blocking (via /etc/hosts)")
+        blockingLabel.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+
+        let domainRow = NSStackView(views: [domainField, addDomainButton])
+        domainRow.orientation = .horizontal
+        domainRow.spacing = 8
+
         let saveButton = NSButton(title: "Save", target: self, action: #selector(savePreferences))
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r"
@@ -95,9 +112,10 @@ final class PreferencesWindowController: NSWindowController {
         stack.addArrangedSubview(hotkeyLabel)
         stack.addArrangedSubview(hotkeyField)
         stack.addArrangedSubview(deepBreathCheckbox)
-        stack.addArrangedSubview(screenTimeCheckbox)
-        stack.addArrangedSubview(screenTimeStatusLabel)
-        stack.addArrangedSubview(openScreenTimeButton)
+        stack.addArrangedSubview(blockingLabel)
+        stack.addArrangedSubview(domainRow)
+        stack.addArrangedSubview(domainListLabel)
+        stack.addArrangedSubview(clearDomainsButton)
         stack.addArrangedSubview(NSView())
         stack.addArrangedSubview(saveButton)
 
@@ -114,8 +132,7 @@ final class PreferencesWindowController: NSWindowController {
         minutesField.stringValue = "\(currentSnapshot.minutes)"
         hotkeyField.hotkey = currentSnapshot.hotkey
         deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
-        screenTimeCheckbox.state = blocker.screenTimeCompanionEnabled ? .on : .off
-        updateScreenTimeStatus(enabled: blocker.screenTimeCompanionEnabled)
+        updateDomainList()
     }
 
     func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
@@ -128,7 +145,6 @@ final class PreferencesWindowController: NSWindowController {
     @objc private func savePreferences() {
         let minutesValue = Int(minutesField.stringValue) ?? currentSnapshot.minutes
         currentSnapshot.minutes = max(1, minutesValue)
-        blocker.setScreenTimeCompanionEnabled(screenTimeCheckbox.state == .on)
         onUpdate(currentSnapshot)
         window?.close()
     }
@@ -137,28 +153,26 @@ final class PreferencesWindowController: NSWindowController {
         currentSnapshot.deepBreathEnabled = sender.state == .on
     }
 
-    @objc private func toggleScreenTimeCompanion(_ sender: NSButton) {
-        updateScreenTimeStatus(enabled: sender.state == .on)
+    @objc private func addDomain() {
+        let domain = domainField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !domain.isEmpty else { return }
+        blocker.addDomain(domain)
+        domainField.stringValue = ""
+        updateDomainList()
     }
 
-    @objc private func openScreenTimeSelection() {
-        guard blocker.openScreenTimeSettings() else {
-            let alert = NSAlert()
-            alert.messageText = "Unable to open companion app"
-            alert.informativeText = "Install Pomafocus iOS on this Mac from the App Store/TestFlight, launch it once, then try again."
-            alert.runModal()
-            return
-        }
+    @objc private func clearDomains() {
+        blocker.blockedDomains = []
+        updateDomainList()
     }
 
-    private func updateScreenTimeStatus(enabled: Bool) {
-        openScreenTimeButton.isEnabled = enabled
-        if enabled {
-            screenTimeStatusLabel.stringValue = blocker.isCompanionInstalled
-                ? "When focus starts, Pomafocus asks the companion app to enforce Screen Time blocking."
-                : "Companion app not found. Install Pomafocus iOS on this Mac and launch it once."
+    private func updateDomainList() {
+        let domains = blocker.blockedDomains
+        if domains.isEmpty {
+            domainListLabel.stringValue = "No domains configured for blocking."
         } else {
-            screenTimeStatusLabel.stringValue = "Companion integration is disabled."
+            domainListLabel.stringValue = domains.joined(separator: ", ")
         }
+        clearDomainsButton.isHidden = domains.isEmpty
     }
 }

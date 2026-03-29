@@ -5,123 +5,111 @@ import Testing
 
 @MainActor
 @Suite struct PomodoroBlockerMacOSTests {
-    @Test func usesCompanionCommandsWhenEnabled() {
-        let defaults = isolatedDefaults()
-        var openedHosts: [String] = []
-        let blocker = PomodoroBlocker(
-            defaults: defaults,
-            openURL: { url in
-                openedHosts.append(url.host ?? "")
-                return true
-            },
-            canOpenCommandURL: { _ in true },
-            openCommandWithCompanion: { _ in false },
-            launchCompanionApp: { false }
-        )
-
-        blocker.beginBlocking()
-        #expect(openedHosts.isEmpty)
+    @Test func initialStateHasNoSelection() {
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: MockHostsModifier())
         #expect(blocker.hasSelection == false)
+        #expect(blocker.selectionSummary == "No domains selected")
+        #expect(blocker.blockedDomains.isEmpty)
+    }
 
-        blocker.setScreenTimeCompanionEnabled(true)
+    @Test func addAndRemoveDomains() {
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: MockHostsModifier())
+
+        blocker.addDomain("x.com")
+        blocker.addDomain("youtube.com")
+        #expect(blocker.blockedDomains == ["x.com", "youtube.com"])
         #expect(blocker.hasSelection == true)
-        #expect(blocker.selectionSummary == "Screen Time via companion app")
+        #expect(blocker.selectionSummary == "2 domains blocked")
 
+        blocker.removeDomain("x.com")
+        #expect(blocker.blockedDomains == ["youtube.com"])
+        #expect(blocker.selectionSummary == "1 domain blocked")
+    }
+
+    @Test func addDomainNormalizesAndDeduplicates() {
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: MockHostsModifier())
+
+        blocker.addDomain("  X.COM  ")
+        #expect(blocker.blockedDomains == ["x.com"])
+
+        blocker.addDomain("x.com")
+        #expect(blocker.blockedDomains == ["x.com"])
+
+        blocker.addDomain("")
+        #expect(blocker.blockedDomains == ["x.com"])
+    }
+
+    @Test func domainsPersistToDefaults() {
+        let defaults = isolatedDefaults()
+        let blocker = PomodoroBlocker(defaults: defaults, hostsModifier: MockHostsModifier())
+        blocker.addDomain("test.com")
+
+        let restored = PomodoroBlocker(defaults: defaults, hostsModifier: MockHostsModifier())
+        #expect(restored.blockedDomains == ["test.com"])
+    }
+
+    @Test func beginBlockingCallsHostsModifier() {
+        let mock = MockHostsModifier()
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: mock)
+
+        blocker.addDomain("x.com")
+        blocker.addDomain("youtube.com")
         blocker.beginBlocking()
-        blocker.endBlocking()
-        let openedSettings = blocker.openScreenTimeSettings()
 
-        #expect(openedHosts == ["block-on", "block-off", "screen-time"])
-        #expect(openedSettings == true)
+        #expect(mock.applyCount == 1)
+        #expect(mock.lastDomains == ["x.com", "youtube.com"])
     }
 
-    @Test func reportsFailureWhenURLCommandCannotBeOpened() {
-        let blocker = PomodoroBlocker(
-            defaults: isolatedDefaults(),
-            openURL: { _ in false },
-            canOpenCommandURL: { _ in true },
-            openCommandWithCompanion: { _ in false },
-            launchCompanionApp: { false }
-        )
-        blocker.setScreenTimeCompanionEnabled(true)
-        #expect(blocker.openScreenTimeSettings() == false)
-    }
+    @Test func endBlockingCallsHostsModifier() {
+        let mock = MockHostsModifier()
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: mock)
 
-    @Test func launchesCompanionWhenCustomURLSchemeUnavailable() {
-        var launchCount = 0
-        let blocker = PomodoroBlocker(
-            defaults: isolatedDefaults(),
-            openURL: { _ in
-                Issue.record("openURL should not be called when command URL has no handler")
-                return false
-            },
-            canOpenCommandURL: { _ in false },
-            openCommandWithCompanion: { _ in false },
-            launchCompanionApp: {
-                launchCount += 1
-                return true
-            }
-        )
-
-        blocker.setScreenTimeCompanionEnabled(true)
-        blocker.beginBlocking()
-        blocker.openScreenTimeSettings()
-
-        #expect(launchCount == 2)
-    }
-
-    @Test func retriesCommandAfterLaunchingCompanion() {
-        var launchCount = 0
-        var commandAttemptCount = 0
-        let blocker = PomodoroBlocker(
-            defaults: isolatedDefaults(),
-            openURL: { _ in
-                Issue.record("openURL should not be called in this path")
-                return false
-            },
-            canOpenCommandURL: { _ in false },
-            openCommandWithCompanion: { _ in
-                commandAttemptCount += 1
-                return commandAttemptCount > 1
-            },
-            launchCompanionApp: {
-                launchCount += 1
-                return true
-            }
-        )
-
-        blocker.setScreenTimeCompanionEnabled(true)
-        let opened = blocker.openScreenTimeSettings()
-
-        #expect(opened == true)
-        #expect(launchCount == 1)
-        #expect(commandAttemptCount == 2)
-    }
-
-    @Test func usesCompanionBundleToOpenCommandWhenSchemeHasNoGlobalHandler() {
-        var receivedHosts: [String] = []
-        let blocker = PomodoroBlocker(
-            defaults: isolatedDefaults(),
-            openURL: { _ in
-                Issue.record("openURL should not be called when command URL has no global handler")
-                return false
-            },
-            canOpenCommandURL: { _ in false },
-            openCommandWithCompanion: { url in
-                receivedHosts.append(url.host ?? "")
-                return true
-            },
-            launchCompanionApp: {
-                Issue.record("launchCompanionApp should not run when opening URL via companion succeeds")
-                return false
-            }
-        )
-
-        blocker.setScreenTimeCompanionEnabled(true)
+        blocker.addDomain("x.com")
         blocker.beginBlocking()
         blocker.endBlocking()
 
-        #expect(receivedHosts == ["block-on", "block-off"])
+        #expect(mock.clearCount == 1)
+    }
+
+    @Test func endBlockingIsIdempotent() {
+        let mock = MockHostsModifier()
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: mock)
+
+        blocker.addDomain("x.com")
+        blocker.beginBlocking()
+        blocker.endBlocking()
+        blocker.endBlocking()
+
+        #expect(mock.clearCount == 1)
+    }
+
+    @Test func beginBlockingSkipsWhenNoDomains() {
+        let mock = MockHostsModifier()
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: mock)
+
+        blocker.beginBlocking()
+        #expect(mock.applyCount == 0)
+    }
+
+    @Test func hostsBlockContentGeneration() {
+        let content = PomodoroBlocker.hostsBlockContent(for: ["x.com", "test.org"])
+        let expected = """
+        # POMAFOCUS BLOCK START
+        127.0.0.1 x.com
+        ::1 x.com
+        127.0.0.1 test.org
+        ::1 test.org
+        # POMAFOCUS BLOCK END
+        """
+        #expect(content == expected)
+    }
+
+    @Test func conformsToPomodoroBlocking() {
+        let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: MockHostsModifier())
+        let blocking: any PomodoroBlocking = blocker
+        #expect(blocking.hasSelection == false)
+        blocking.beginBlocking()
+        blocking.endBlocking()
     }
 
     private func isolatedDefaults() -> UserDefaults {

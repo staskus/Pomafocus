@@ -6,106 +6,153 @@ import Foundation
 public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     public static let shared = PomodoroBlocker()
 
-    private let defaults: UserDefaults
-    private let commandURLBase = "pomafocus://"
-    private let companionBundleID = "com.povilasstaskus.pomafocus.ios"
-    private let openURL: (URL) -> Bool
-    private let canOpenCommandURL: (URL) -> Bool
-    private let openCommandWithCompanion: (URL) -> Bool
-    private let launchCompanionApp: () -> Bool
-
-    private enum Keys {
-        static let screenTimeCompanionEnabled = "pomodoro.screenTimeCompanionEnabled"
+    @Published public var blockedDomains: [String] {
+        didSet { persistDomains() }
     }
 
-    public private(set) var screenTimeCompanionEnabled: Bool
+    private let defaults: UserDefaults
+    private let domainsKey = "pomafocus.blocking.domains"
+    private var isBlocking = false
+    private let hostsModifier: HostsFileModifier
+
+    nonisolated static let markerStart = "# POMAFOCUS BLOCK START"
+    nonisolated static let markerEnd = "# POMAFOCUS BLOCK END"
 
     init(
         defaults: UserDefaults = .standard,
-        openURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) },
-        canOpenCommandURL: @escaping (URL) -> Bool = { url in
-            NSWorkspace.shared.urlForApplication(toOpen: url) != nil
-        },
-        openCommandWithCompanion: @escaping (URL) -> Bool = { url in
-            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.povilasstaskus.pomafocus.ios") else {
-                return false
-            }
-            NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: .init()) { _, error in
-                if let error {
-                    NSLog("Failed to open companion command URL: %@", error.localizedDescription)
-                }
-            }
-            return true
-        },
-        launchCompanionApp: @escaping () -> Bool = {
-            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.povilasstaskus.pomafocus.ios") else {
-                return false
-            }
-            NSWorkspace.shared.openApplication(at: appURL, configuration: .init(), completionHandler: nil)
-            return true
-        }
+        hostsModifier: HostsFileModifier = AppleScriptHostsModifier()
     ) {
         self.defaults = defaults
-        self.openURL = openURL
-        self.canOpenCommandURL = canOpenCommandURL
-        self.openCommandWithCompanion = openCommandWithCompanion
-        self.launchCompanionApp = launchCompanionApp
-        screenTimeCompanionEnabled = defaults.bool(forKey: Keys.screenTimeCompanionEnabled)
-    }
-
-    public func setScreenTimeCompanionEnabled(_ enabled: Bool) {
-        screenTimeCompanionEnabled = enabled
-        defaults.set(enabled, forKey: Keys.screenTimeCompanionEnabled)
+        self.hostsModifier = hostsModifier
+        self.blockedDomains = defaults.stringArray(forKey: domainsKey) ?? []
     }
 
     public func beginBlocking() {
-        guard screenTimeCompanionEnabled else { return }
-        _ = sendCompanionCommand("block-on")
+        guard !blockedDomains.isEmpty else { return }
+        isBlocking = true
+        hostsModifier.applyBlocking(domains: blockedDomains)
     }
 
     public func endBlocking() {
-        guard screenTimeCompanionEnabled else { return }
-        _ = sendCompanionCommand("block-off")
-    }
-
-    @discardableResult
-    public func openScreenTimeSettings() -> Bool {
-        sendCompanionCommand("screen-time")
-    }
-
-    public var isCompanionInstalled: Bool {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: companionBundleID) != nil
+        guard isBlocking else { return }
+        isBlocking = false
+        hostsModifier.clearBlocking()
     }
 
     public var hasSelection: Bool {
-        screenTimeCompanionEnabled
+        !blockedDomains.isEmpty
     }
 
     public var selectionSummary: String {
-        screenTimeCompanionEnabled ? "Screen Time via companion app" : "Screen Time companion disabled"
+        let count = blockedDomains.count
+        return count == 0 ? "No domains selected" : "\(count) domain\(count == 1 ? "" : "s") blocked"
     }
 
-    @discardableResult
-    private func sendCompanionCommand(_ command: String) -> Bool {
-        guard let url = URL(string: "\(commandURLBase)\(command)") else {
-            return false
+    public func addDomain(_ domain: String) {
+        let cleaned = domain.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !cleaned.isEmpty, !blockedDomains.contains(cleaned) else { return }
+        blockedDomains.append(cleaned)
+    }
+
+    public func removeDomain(_ domain: String) {
+        blockedDomains.removeAll { $0 == domain }
+    }
+
+    private func persistDomains() {
+        defaults.set(blockedDomains, forKey: domainsKey)
+    }
+
+    // MARK: - /etc/hosts content generation
+
+    nonisolated static func hostsBlockContent(for domains: [String]) -> String {
+        var lines = [markerStart]
+        for domain in domains {
+            lines.append("127.0.0.1 \(domain)")
+            lines.append("::1 \(domain)")
         }
-        if canOpenCommandURL(url) {
-            return openURL(url)
+        lines.append(markerEnd)
+        return lines.joined(separator: "\n")
+    }
+
+    nonisolated static func shellApplyCommand(domains: [String]) -> String {
+        let content = hostsBlockContent(for: domains)
+        let escaped = content.replacingOccurrences(of: "'", with: "'\\''")
+        return """
+        sed -i '' '/\(markerStart)/,/\(markerEnd)/d' /etc/hosts && \
+        printf '%s\\n' '\(escaped)' >> /etc/hosts && \
+        dscacheutil -flushcache && \
+        killall -HUP mDNSResponder 2>/dev/null; true
+        """
+    }
+
+    nonisolated static func shellClearCommand() -> String {
+        return """
+        sed -i '' '/\(markerStart)/,/\(markerEnd)/d' /etc/hosts && \
+        dscacheutil -flushcache && \
+        killall -HUP mDNSResponder 2>/dev/null; true
+        """
+    }
+}
+
+// MARK: - Hosts file modification
+
+protocol HostsFileModifier: Sendable {
+    func applyBlocking(domains: [String])
+    func clearBlocking()
+}
+
+final class AppleScriptHostsModifier: HostsFileModifier {
+    func applyBlocking(domains: [String]) {
+        let shell = PomodoroBlocker.shellApplyCommand(domains: domains)
+        runWithAdminPrivileges(shell)
+    }
+
+    func clearBlocking() {
+        let shell = PomodoroBlocker.shellClearCommand()
+        runWithAdminPrivileges(shell)
+    }
+
+    private func runWithAdminPrivileges(_ shellCommand: String) {
+        let escaped = shellCommand.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let source = "do shell script \"\(escaped)\" with administrator privileges"
+        let script = NSAppleScript(source: source)
+        var error: NSDictionary?
+        script?.executeAndReturnError(&error)
+        if let error {
+            NSLog("Pomafocus hosts blocking error: %@", error.description)
         }
-        if openCommandWithCompanion(url) {
-            return true
-        }
-        guard launchCompanionApp() else {
-            return false
-        }
-        if openCommandWithCompanion(url) {
-            return true
-        }
-        if canOpenCommandURL(url) {
-            return openURL(url)
-        }
-        return false
+    }
+}
+
+final class MockHostsModifier: HostsFileModifier {
+    private let _applyCount = LockedValue(0)
+    private let _clearCount = LockedValue(0)
+    private let _lastDomains = LockedValue<[String]>([])
+
+    var applyCount: Int { _applyCount.value }
+    var clearCount: Int { _clearCount.value }
+    var lastDomains: [String] { _lastDomains.value }
+
+    func applyBlocking(domains: [String]) {
+        _applyCount.value += 1
+        _lastDomains.value = domains
+    }
+
+    func clearBlocking() {
+        _clearCount.value += 1
+    }
+}
+
+private final class LockedValue<T>: @unchecked Sendable {
+    private var _value: T
+    private let lock = NSLock()
+
+    init(_ value: T) { _value = value }
+
+    var value: T {
+        get { lock.lock(); defer { lock.unlock() }; return _value }
+        set { lock.lock(); defer { lock.unlock() }; _value = newValue }
     }
 }
 #endif

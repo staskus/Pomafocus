@@ -11,8 +11,8 @@ final class PreferencesWindowController: NSWindowController {
     private let daemonStatusLabel = NSTextField(labelWithString: "")
     private let domainField = NSTextField(string: "")
     private let addDomainButton = NSButton(title: "Add", target: nil, action: nil)
-    private let domainListLabel = NSTextField(labelWithString: "")
-    private let clearDomainsButton = NSButton(title: "Clear All", target: nil, action: nil)
+    private let domainScrollView = NSScrollView()
+    private let domainStackView = NSStackView()
     private let blocker = PomodoroBlocker.shared
     private var currentSnapshot: PomodoroSettings.Snapshot
 
@@ -37,7 +37,7 @@ final class PreferencesWindowController: NSWindowController {
 
     private func setupWindow() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 480),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -81,17 +81,28 @@ final class PreferencesWindowController: NSWindowController {
 
         domainField.placeholderString = "example.com"
         domainField.focusRingType = .none
+        domainField.target = self
+        domainField.action = #selector(addDomain)
         addDomainButton.target = self
         addDomainButton.action = #selector(addDomain)
         addDomainButton.bezelStyle = .rounded
-        clearDomainsButton.target = self
-        clearDomainsButton.action = #selector(clearDomains)
-        clearDomainsButton.bezelStyle = .rounded
 
-        domainListLabel.maximumNumberOfLines = 0
-        domainListLabel.preferredMaxLayoutWidth = 380
-        domainListLabel.textColor = .secondaryLabelColor
-        domainListLabel.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+        domainStackView.orientation = .vertical
+        domainStackView.spacing = 2
+        domainStackView.translatesAutoresizingMaskIntoConstraints = false
+
+        let clipView = NSClipView()
+        clipView.documentView = domainStackView
+        domainScrollView.contentView = clipView
+        domainScrollView.hasVerticalScroller = true
+        domainScrollView.borderType = .bezelBorder
+        domainScrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            domainStackView.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
+            domainStackView.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
+            domainStackView.topAnchor.constraint(equalTo: clipView.topAnchor)
+        ])
     }
 
     private func buildLayout(in window: NSWindow) {
@@ -128,9 +139,7 @@ final class PreferencesWindowController: NSWindowController {
         stack.addArrangedSubview(blockingLabel)
         stack.addArrangedSubview(setupRow)
         stack.addArrangedSubview(domainRow)
-        stack.addArrangedSubview(domainListLabel)
-        stack.addArrangedSubview(clearDomainsButton)
-        stack.addArrangedSubview(NSView())
+        stack.addArrangedSubview(domainScrollView)
         stack.addArrangedSubview(saveButton)
 
         contentView.addSubview(stack)
@@ -138,7 +147,8 @@ final class PreferencesWindowController: NSWindowController {
             stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            domainScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80)
         ])
     }
 
@@ -147,7 +157,7 @@ final class PreferencesWindowController: NSWindowController {
         hotkeyField.hotkey = currentSnapshot.hotkey
         deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
         updateDaemonStatus()
-        updateDomainList()
+        rebuildDomainList()
     }
 
     func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
@@ -188,37 +198,59 @@ final class PreferencesWindowController: NSWindowController {
         guard !domain.isEmpty else { return }
         blocker.addDomain(domain)
         domainField.stringValue = ""
-        updateDomainList()
+        rebuildDomainList()
     }
 
-    @objc private func clearDomains() {
-        blocker.blockedDomains = []
-        updateDomainList()
+    @objc private func removeDomainClicked(_ sender: NSButton) {
+        guard let domain = sender.cell?.representedObject as? String else { return }
+        blocker.removeDomain(domain)
+        rebuildDomainList()
     }
 
     private func updateDaemonStatus() {
         if blocker.isDaemonInstalled {
-            setupButton.title = "Remove Blocking Helper"
-            daemonStatusLabel.stringValue = "Installed - blocking works without password prompts"
+            setupButton.title = "Remove Helper"
+            daemonStatusLabel.stringValue = "Installed - blocks without password"
             daemonStatusLabel.textColor = .systemGreen
             domainField.isEnabled = true
             addDomainButton.isEnabled = true
         } else {
             setupButton.title = "Setup Blocking"
-            daemonStatusLabel.stringValue = "Requires one-time admin password to install helper"
+            daemonStatusLabel.stringValue = "One-time admin password to install"
             daemonStatusLabel.textColor = .secondaryLabelColor
             domainField.isEnabled = false
             addDomainButton.isEnabled = false
         }
     }
 
-    private func updateDomainList() {
-        let domains = blocker.blockedDomains
-        if domains.isEmpty {
-            domainListLabel.stringValue = "No domains configured for blocking."
-        } else {
-            domainListLabel.stringValue = domains.joined(separator: ", ")
+    private func rebuildDomainList() {
+        domainStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        for domain in blocker.blockedDomains {
+            let row = NSStackView()
+            row.orientation = .horizontal
+            row.spacing = 4
+
+            let label = NSTextField(labelWithString: domain)
+            label.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+            label.lineBreakMode = .byTruncatingTail
+
+            let removeBtn = NSButton(title: "x", target: self, action: #selector(removeDomainClicked(_:)))
+            removeBtn.bezelStyle = .inline
+            removeBtn.font = .systemFont(ofSize: 10, weight: .bold)
+            removeBtn.cell?.representedObject = domain
+            removeBtn.setContentHuggingPriority(.required, for: .horizontal)
+
+            row.addArrangedSubview(label)
+            row.addArrangedSubview(removeBtn)
+            domainStackView.addArrangedSubview(row)
         }
-        clearDomainsButton.isHidden = domains.isEmpty
+
+        if blocker.blockedDomains.isEmpty {
+            let empty = NSTextField(labelWithString: "No domains added yet")
+            empty.textColor = .tertiaryLabelColor
+            empty.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+            domainStackView.addArrangedSubview(empty)
+        }
     }
 }

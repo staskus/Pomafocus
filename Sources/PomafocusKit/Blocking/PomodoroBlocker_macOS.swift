@@ -40,54 +40,68 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     public func installDaemon() -> Bool {
         let helperScript = Self.generateHelperScript()
         let plistContent = Self.generateDaemonPlist()
+        let controlDir = (Self.controlFilePath as NSString).deletingLastPathComponent
+        let user = NSUserName()
 
-        let shellCommand = """
-        mkdir -p /usr/local/var/pomafocus && \
-        cat > '\(Self.helperPath)' << 'HELPER_EOF'
-        \(helperScript)
-        HELPER_EOF
-        chmod 755 '\(Self.helperPath)' && \
-        cat > '\(Self.daemonPlistPath)' << 'PLIST_EOF'
-        \(plistContent)
-        PLIST_EOF
-        launchctl bootout system/\(Self.daemonLabel) 2>/dev/null; \
-        launchctl bootstrap system '\(Self.daemonPlistPath)'
-        """
-
-        let escaped = shellCommand.replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        let source = "do shell script \"\(escaped)\" with administrator privileges"
-        let script = NSAppleScript(source: source)
-        var error: NSDictionary?
-        script?.executeAndReturnError(&error)
-
-        if let error {
-            NSLog("Pomafocus daemon install error: %@", error.description)
+        // Write files to temp first, then move with admin privileges
+        let tmpHelper = NSTemporaryDirectory() + "pomafocus-hosts-helper"
+        let tmpPlist = NSTemporaryDirectory() + "pomafocus-hosts-daemon.plist"
+        do {
+            try helperScript.write(toFile: tmpHelper, atomically: true, encoding: .utf8)
+            try plistContent.write(toFile: tmpPlist, atomically: true, encoding: .utf8)
+        } catch {
+            NSLog("Pomafocus: failed to write temp files: %@", error.localizedDescription)
             return false
         }
 
-        isDaemonInstalled = true
-        return true
+        let shellCommand = [
+            "mkdir -p '\(controlDir)'",
+            "chown \(user):staff '\(controlDir)'",
+            "cp '\(tmpHelper)' '\(Self.helperPath)'",
+            "chmod 755 '\(Self.helperPath)'",
+            "cp '\(tmpPlist)' '\(Self.daemonPlistPath)'",
+            "launchctl bootout system/\(Self.daemonLabel) 2>/dev/null; true",
+            "launchctl bootstrap system '\(Self.daemonPlistPath)'"
+        ].joined(separator: " && ")
+
+        let success = runAppleScriptWithAdmin(shellCommand)
+        try? FileManager.default.removeItem(atPath: tmpHelper)
+        try? FileManager.default.removeItem(atPath: tmpPlist)
+
+        if success {
+            isDaemonInstalled = true
+        }
+        return success
     }
 
+    @discardableResult
     public func uninstallDaemon() -> Bool {
-        let shellCommand = """
-        launchctl bootout system/\(Self.daemonLabel) 2>/dev/null; \
-        rm -f '\(Self.helperPath)' '\(Self.daemonPlistPath)' '\(Self.controlFilePath)' && \
-        sed -i '' '/\(Self.markerStart)/,/\(Self.markerEnd)/d' /etc/hosts && \
-        dscacheutil -flushcache && \
-        killall -HUP mDNSResponder 2>/dev/null; true
-        """
+        let shellCommand = [
+            "launchctl bootout system/\(Self.daemonLabel) 2>/dev/null; true",
+            "rm -f '\(Self.helperPath)' '\(Self.daemonPlistPath)' '\(Self.controlFilePath)'",
+            "sed -i '' '/\(Self.markerStart)/,/\(Self.markerEnd)/d' /etc/hosts",
+            "dscacheutil -flushcache",
+            "killall -HUP mDNSResponder 2>/dev/null; true"
+        ].joined(separator: " && ")
 
-        let escaped = shellCommand.replacingOccurrences(of: "\\", with: "\\\\")
+        let success = runAppleScriptWithAdmin(shellCommand)
+        isDaemonInstalled = false
+        return success
+    }
+
+    private func runAppleScriptWithAdmin(_ shellCommand: String) -> Bool {
+        let escaped = shellCommand
+            .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
         let source = "do shell script \"\(escaped)\" with administrator privileges"
         let script = NSAppleScript(source: source)
         var error: NSDictionary?
         script?.executeAndReturnError(&error)
-
-        isDaemonInstalled = false
-        return error == nil
+        if let error {
+            NSLog("Pomafocus admin command error: %@", error.description)
+            return false
+        }
+        return true
     }
 
     // MARK: - PomodoroBlocking
@@ -144,56 +158,50 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     // MARK: - Daemon file generation
 
     nonisolated static func generateHelperScript() -> String {
-        return """
-        #!/bin/bash
-        set -euo pipefail
-        CONTROL_FILE="\(controlFilePath)"
-        MARKER_START="\(markerStart)"
-        MARKER_END="\(markerEnd)"
-        HOSTS="/etc/hosts"
-
-        # Remove existing block
-        sed -i '' "/${MARKER_START}/,/${MARKER_END}/d" "$HOSTS"
-
-        # If control file exists and is non-empty, apply new block
-        if [ -s "$CONTROL_FILE" ]; then
-            echo "$MARKER_START" >> "$HOSTS"
-            while IFS= read -r domain || [ -n "$domain" ]; do
-                [ -z "$domain" ] && continue
-                echo "127.0.0.1 $domain" >> "$HOSTS"
-                echo "::1 $domain" >> "$HOSTS"
-            done < "$CONTROL_FILE"
-            echo "$MARKER_END" >> "$HOSTS"
-        fi
-
-        # Flush DNS cache
-        dscacheutil -flushcache
-        killall -HUP mDNSResponder 2>/dev/null || true
-        """
+        // No indentation - this becomes a real shell script file
+        return "#!/bin/bash\n"
+            + "set -euo pipefail\n"
+            + "CONTROL_FILE=\"\(controlFilePath)\"\n"
+            + "MARKER_START=\"\(markerStart)\"\n"
+            + "MARKER_END=\"\(markerEnd)\"\n"
+            + "HOSTS=\"/etc/hosts\"\n"
+            + "\n"
+            + "sed -i '' \"/${MARKER_START}/,/${MARKER_END}/d\" \"$HOSTS\"\n"
+            + "\n"
+            + "if [ -s \"$CONTROL_FILE\" ]; then\n"
+            + "  echo \"$MARKER_START\" >> \"$HOSTS\"\n"
+            + "  while IFS= read -r domain || [ -n \"$domain\" ]; do\n"
+            + "    [ -z \"$domain\" ] && continue\n"
+            + "    echo \"127.0.0.1 $domain\" >> \"$HOSTS\"\n"
+            + "    echo \"::1 $domain\" >> \"$HOSTS\"\n"
+            + "  done < \"$CONTROL_FILE\"\n"
+            + "  echo \"$MARKER_END\" >> \"$HOSTS\"\n"
+            + "fi\n"
+            + "\n"
+            + "dscacheutil -flushcache\n"
+            + "killall -HUP mDNSResponder 2>/dev/null || true\n"
     }
 
     nonisolated static func generateDaemonPlist() -> String {
-        return """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
-        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>Label</key>
-            <string>\(daemonLabel)</string>
-            <key>ProgramArguments</key>
-            <array>
-                <string>\(helperPath)</string>
-            </array>
-            <key>WatchPaths</key>
-            <array>
-                <string>\(controlFilePath)</string>
-            </array>
-            <key>RunAtLoad</key>
-            <false/>
-        </dict>
-        </plist>
-        """
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
+            + "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+            + "<plist version=\"1.0\">\n"
+            + "<dict>\n"
+            + "  <key>Label</key>\n"
+            + "  <string>\(daemonLabel)</string>\n"
+            + "  <key>ProgramArguments</key>\n"
+            + "  <array>\n"
+            + "    <string>\(helperPath)</string>\n"
+            + "  </array>\n"
+            + "  <key>WatchPaths</key>\n"
+            + "  <array>\n"
+            + "    <string>\(controlFilePath)</string>\n"
+            + "  </array>\n"
+            + "  <key>RunAtLoad</key>\n"
+            + "  <false/>\n"
+            + "</dict>\n"
+            + "</plist>\n"
     }
 }
 
@@ -204,13 +212,9 @@ protocol HostsFileModifier: Sendable {
     func clearBlocking()
 }
 
-/// Writes a control file that the LaunchDaemon watches.
-/// When the file changes, the daemon applies /etc/hosts changes as root.
-/// No admin prompt needed - just a file write.
 final class DaemonHostsModifier: HostsFileModifier {
     func applyBlocking(domains: [String]) {
-        let content = domains.joined(separator: "\n")
-        writeControlFile(content)
+        writeControlFile(domains.joined(separator: "\n"))
     }
 
     func clearBlocking() {
@@ -219,8 +223,6 @@ final class DaemonHostsModifier: HostsFileModifier {
 
     private func writeControlFile(_ content: String) {
         let path = PomodoroBlocker.controlFilePath
-        let dir = (path as NSString).deletingLastPathComponent
-        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         do {
             try content.write(toFile: path, atomically: true, encoding: .utf8)
         } catch {

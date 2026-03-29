@@ -19,7 +19,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
 
     nonisolated static let markerStart = "# POMAFOCUS BLOCK START"
     nonisolated static let markerEnd = "# POMAFOCUS BLOCK END"
-    nonisolated static let controlFilePath = "/usr/local/var/pomafocus/blocked-domains"
+    nonisolated static let controlFilePath = "/tmp/pomafocus-blocked-domains"
     nonisolated static let helperPath = "/usr/local/bin/pomafocus-hosts-helper"
     nonisolated static let daemonLabel = "com.staskus.pomafocus.hosts"
     nonisolated static let daemonPlistPath = "/Library/LaunchDaemons/com.staskus.pomafocus.hosts.plist"
@@ -40,8 +40,6 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     public func installDaemon() -> Bool {
         let helperScript = Self.generateHelperScript()
         let plistContent = Self.generateDaemonPlist()
-        let controlDir = (Self.controlFilePath as NSString).deletingLastPathComponent
-        let user = NSUserName()
 
         // Write files to temp first, then move with admin privileges
         let tmpHelper = NSTemporaryDirectory() + "pomafocus-hosts-helper"
@@ -55,8 +53,6 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
         }
 
         let shellCommand = [
-            "mkdir -p '\(controlDir)'",
-            "chown \(user):staff '\(controlDir)'",
             "cp '\(tmpHelper)' '\(Self.helperPath)'",
             "chmod 755 '\(Self.helperPath)'",
             "cp '\(tmpPlist)' '\(Self.daemonPlistPath)'",
@@ -107,7 +103,11 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     // MARK: - PomodoroBlocking
 
     public func beginBlocking() {
-        guard !blockedDomains.isEmpty else { return }
+        NSLog("Pomafocus beginBlocking: %d domains, isDaemonInstalled=%d", blockedDomains.count, isDaemonInstalled ? 1 : 0)
+        guard !blockedDomains.isEmpty else {
+            NSLog("Pomafocus beginBlocking: skipping - no domains")
+            return
+        }
         isBlocking = true
         hostsModifier.applyBlocking(domains: blockedDomains)
     }
@@ -216,20 +216,20 @@ protocol HostsFileModifier: Sendable {
 
 final class DaemonHostsModifier: HostsFileModifier {
     func applyBlocking(domains: [String]) {
-        writeControlFile(domains.joined(separator: "\n"))
-    }
-
-    func clearBlocking() {
-        writeControlFile("")
-    }
-
-    private func writeControlFile(_ content: String) {
         let path = PomodoroBlocker.controlFilePath
+        let content = domains.joined(separator: "\n")
+        NSLog("Pomafocus: writing %d domains to %@", domains.count, path)
         do {
             try content.write(toFile: path, atomically: true, encoding: .utf8)
         } catch {
-            NSLog("Pomafocus: failed to write control file: %@", error.localizedDescription)
+            NSLog("Pomafocus: FAILED to write control file: %@", error.localizedDescription)
         }
+    }
+
+    func clearBlocking() {
+        let path = PomodoroBlocker.controlFilePath
+        NSLog("Pomafocus: clearing blocking (deleting %@)", path)
+        try? FileManager.default.removeItem(atPath: path)
     }
 }
 

@@ -13,7 +13,7 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
     @Published public private(set) var isDaemonInstalled: Bool
 
     private let defaults: UserDefaults
-    private let domainsKey = "pomafocus.blocking.domains"
+    private let domainsKey = "pomafocus.mac.blockedWebsites"
     private var isBlocking = false
     private let hostsModifier: HostsFileModifier
 
@@ -200,6 +200,8 @@ public final class PomodoroBlocker: ObservableObject, PomodoroBlocking {
             + "  </array>\n"
             + "  <key>RunAtLoad</key>\n"
             + "  <false/>\n"
+            + "  <key>ThrottleInterval</key>\n"
+            + "  <integer>2</integer>\n"
             + "</dict>\n"
             + "</plist>\n"
     }

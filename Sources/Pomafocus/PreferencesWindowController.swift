@@ -1,7 +1,7 @@
 import AppKit
 import PomafocusKit
 
-final class PreferencesWindowController: NSWindowController {
+final class PreferencesWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate {
     private let settings: PomodoroSettings
     private let onUpdate: (PomodoroSettings.Snapshot) -> Void
     private let minutesField = NSTextField(string: "")
@@ -11,10 +11,13 @@ final class PreferencesWindowController: NSWindowController {
     private let daemonStatusLabel = NSTextField(labelWithString: "")
     private let domainField = NSTextField(string: "")
     private let addDomainButton = NSButton(title: "Add", target: nil, action: nil)
-    private let domainScrollView = NSScrollView()
-    private let domainStackView = NSStackView()
+    private let removeDomainButton = NSButton(title: "Remove", target: nil, action: nil)
+    private let tableView = NSTableView()
+    private let scrollView = NSScrollView()
     private let blocker = PomodoroBlocker.shared
     private var currentSnapshot: PomodoroSettings.Snapshot
+
+    private static let domainColumnID = NSUserInterfaceItemIdentifier("domain")
 
     init(settings: PomodoroSettings, onUpdate: @escaping (PomodoroSettings.Snapshot) -> Void) {
         self.settings = settings
@@ -86,23 +89,27 @@ final class PreferencesWindowController: NSWindowController {
         addDomainButton.target = self
         addDomainButton.action = #selector(addDomain)
         addDomainButton.bezelStyle = .rounded
+        removeDomainButton.target = self
+        removeDomainButton.action = #selector(removeSelectedDomain)
+        removeDomainButton.bezelStyle = .rounded
+        removeDomainButton.isEnabled = false
 
-        domainStackView.orientation = .vertical
-        domainStackView.spacing = 2
-        domainStackView.translatesAutoresizingMaskIntoConstraints = false
+        let column = NSTableColumn(identifier: Self.domainColumnID)
+        column.title = "Blocked Domains"
+        column.resizingMask = .autoresizingMask
+        tableView.addTableColumn(column)
+        tableView.headerView = nil
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.usesAlternatingRowBackgroundColors = true
+        tableView.allowsMultipleSelection = false
+        tableView.rowHeight = 22
+        tableView.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
 
-        let clipView = NSClipView()
-        clipView.documentView = domainStackView
-        domainScrollView.contentView = clipView
-        domainScrollView.hasVerticalScroller = true
-        domainScrollView.borderType = .bezelBorder
-        domainScrollView.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            domainStackView.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
-            domainStackView.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
-            domainStackView.topAnchor.constraint(equalTo: clipView.topAnchor)
-        ])
+        scrollView.documentView = tableView
+        scrollView.hasVerticalScroller = true
+        scrollView.borderType = .bezelBorder
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
     }
 
     private func buildLayout(in window: NSWindow) {
@@ -123,7 +130,7 @@ final class PreferencesWindowController: NSWindowController {
         setupRow.orientation = .horizontal
         setupRow.spacing = 8
 
-        let domainRow = NSStackView(views: [domainField, addDomainButton])
+        let domainRow = NSStackView(views: [domainField, addDomainButton, removeDomainButton])
         domainRow.orientation = .horizontal
         domainRow.spacing = 8
 
@@ -138,8 +145,8 @@ final class PreferencesWindowController: NSWindowController {
         stack.addArrangedSubview(deepBreathCheckbox)
         stack.addArrangedSubview(blockingLabel)
         stack.addArrangedSubview(setupRow)
+        stack.addArrangedSubview(scrollView)
         stack.addArrangedSubview(domainRow)
-        stack.addArrangedSubview(domainScrollView)
         stack.addArrangedSubview(saveButton)
 
         contentView.addSubview(stack)
@@ -148,7 +155,7 @@ final class PreferencesWindowController: NSWindowController {
             stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             stack.topAnchor.constraint(equalTo: contentView.topAnchor),
             stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            domainScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80)
+            scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100)
         ])
     }
 
@@ -157,7 +164,7 @@ final class PreferencesWindowController: NSWindowController {
         hotkeyField.hotkey = currentSnapshot.hotkey
         deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
         updateDaemonStatus()
-        rebuildDomainList()
+        tableView.reloadData()
     }
 
     func applyExternalSnapshot(_ snapshot: PomodoroSettings.Snapshot) {
@@ -166,6 +173,8 @@ final class PreferencesWindowController: NSWindowController {
             applySnapshotToFields()
         }
     }
+
+    // MARK: - Actions
 
     @objc private func savePreferences() {
         let minutesValue = Int(minutesField.stringValue) ?? currentSnapshot.minutes
@@ -198,13 +207,15 @@ final class PreferencesWindowController: NSWindowController {
         guard !domain.isEmpty else { return }
         blocker.addDomain(domain)
         domainField.stringValue = ""
-        rebuildDomainList()
+        tableView.reloadData()
     }
 
-    @objc private func removeDomainClicked(_ sender: NSButton) {
-        guard let domain = sender.cell?.representedObject as? String else { return }
-        blocker.removeDomain(domain)
-        rebuildDomainList()
+    @objc private func removeSelectedDomain() {
+        let row = tableView.selectedRow
+        guard row >= 0, row < blocker.blockedDomains.count else { return }
+        blocker.removeDomain(blocker.blockedDomains[row])
+        tableView.reloadData()
+        removeDomainButton.isEnabled = false
     }
 
     private func updateDaemonStatus() {
@@ -223,34 +234,33 @@ final class PreferencesWindowController: NSWindowController {
         }
     }
 
-    private func rebuildDomainList() {
-        domainStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+    // MARK: - NSTableViewDataSource
 
-        for domain in blocker.blockedDomains {
-            let row = NSStackView()
-            row.orientation = .horizontal
-            row.spacing = 4
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        blocker.blockedDomains.count
+    }
 
-            let label = NSTextField(labelWithString: domain)
-            label.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
-            label.lineBreakMode = .byTruncatingTail
+    func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? {
+        blocker.blockedDomains[row]
+    }
 
-            let removeBtn = NSButton(title: "x", target: self, action: #selector(removeDomainClicked(_:)))
-            removeBtn.bezelStyle = .inline
-            removeBtn.font = .systemFont(ofSize: 10, weight: .bold)
-            removeBtn.cell?.representedObject = domain
-            removeBtn.setContentHuggingPriority(.required, for: .horizontal)
+    // MARK: - NSTableViewDelegate
 
-            row.addArrangedSubview(label)
-            row.addArrangedSubview(removeBtn)
-            domainStackView.addArrangedSubview(row)
-        }
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let cellID = NSUserInterfaceItemIdentifier("DomainCell")
+        let cell = tableView.makeView(withIdentifier: cellID, owner: nil) as? NSTextField
+            ?? {
+                let tf = NSTextField(labelWithString: "")
+                tf.identifier = cellID
+                tf.font = .monospacedSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
+                tf.lineBreakMode = .byTruncatingTail
+                return tf
+            }()
+        cell.stringValue = blocker.blockedDomains[row]
+        return cell
+    }
 
-        if blocker.blockedDomains.isEmpty {
-            let empty = NSTextField(labelWithString: "No domains added yet")
-            empty.textColor = .tertiaryLabelColor
-            empty.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-            domainStackView.addArrangedSubview(empty)
-        }
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        removeDomainButton.isEnabled = tableView.selectedRow >= 0
     }
 }

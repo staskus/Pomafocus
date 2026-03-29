@@ -104,6 +104,22 @@ import Testing
         #expect(content == expected)
     }
 
+    @Test func helperScriptContainsMarkers() {
+        let script = PomodoroBlocker.generateHelperScript()
+        #expect(script.contains(PomodoroBlocker.markerStart))
+        #expect(script.contains(PomodoroBlocker.markerEnd))
+        #expect(script.contains(PomodoroBlocker.controlFilePath))
+        #expect(script.contains("dscacheutil -flushcache"))
+    }
+
+    @Test func daemonPlistContainsWatchPaths() {
+        let plist = PomodoroBlocker.generateDaemonPlist()
+        #expect(plist.contains("<key>WatchPaths</key>"))
+        #expect(plist.contains(PomodoroBlocker.controlFilePath))
+        #expect(plist.contains(PomodoroBlocker.daemonLabel))
+        #expect(plist.contains(PomodoroBlocker.helperPath))
+    }
+
     @Test func conformsToPomodoroBlocking() {
         let blocker = PomodoroBlocker(defaults: isolatedDefaults(), hostsModifier: MockHostsModifier())
         let blocking: any PomodoroBlocking = blocker

@@ -7,6 +7,8 @@ final class PreferencesWindowController: NSWindowController {
     private let minutesField = NSTextField(string: "")
     private lazy var hotkeyField: HotkeyField = HotkeyField(hotkey: currentSnapshot.hotkey)
     private let deepBreathCheckbox = NSButton(checkboxWithTitle: "Require a 30-second deep breath before stopping", target: nil, action: nil)
+    private let setupButton = NSButton(title: "Setup Blocking", target: nil, action: nil)
+    private let daemonStatusLabel = NSTextField(labelWithString: "")
     private let domainField = NSTextField(string: "")
     private let addDomainButton = NSButton(title: "Add", target: nil, action: nil)
     private let domainListLabel = NSTextField(labelWithString: "")
@@ -35,7 +37,7 @@ final class PreferencesWindowController: NSWindowController {
 
     private func setupWindow() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 420),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -70,6 +72,13 @@ final class PreferencesWindowController: NSWindowController {
         deepBreathCheckbox.target = self
         deepBreathCheckbox.action = #selector(toggleDeepBreath(_:))
 
+        setupButton.target = self
+        setupButton.action = #selector(setupDaemon)
+        setupButton.bezelStyle = .rounded
+
+        daemonStatusLabel.textColor = .secondaryLabelColor
+        daemonStatusLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+
         domainField.placeholderString = "example.com"
         domainField.focusRingType = .none
         addDomainButton.target = self
@@ -96,8 +105,12 @@ final class PreferencesWindowController: NSWindowController {
         let minutesLabel = NSTextField(labelWithString: "Session length (minutes)")
         let hotkeyLabel = NSTextField(labelWithString: "Global shortcut")
 
-        let blockingLabel = NSTextField(labelWithString: "Website Blocking (via /etc/hosts)")
+        let blockingLabel = NSTextField(labelWithString: "Website Blocking")
         blockingLabel.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+
+        let setupRow = NSStackView(views: [setupButton, daemonStatusLabel])
+        setupRow.orientation = .horizontal
+        setupRow.spacing = 8
 
         let domainRow = NSStackView(views: [domainField, addDomainButton])
         domainRow.orientation = .horizontal
@@ -113,6 +126,7 @@ final class PreferencesWindowController: NSWindowController {
         stack.addArrangedSubview(hotkeyField)
         stack.addArrangedSubview(deepBreathCheckbox)
         stack.addArrangedSubview(blockingLabel)
+        stack.addArrangedSubview(setupRow)
         stack.addArrangedSubview(domainRow)
         stack.addArrangedSubview(domainListLabel)
         stack.addArrangedSubview(clearDomainsButton)
@@ -132,6 +146,7 @@ final class PreferencesWindowController: NSWindowController {
         minutesField.stringValue = "\(currentSnapshot.minutes)"
         hotkeyField.hotkey = currentSnapshot.hotkey
         deepBreathCheckbox.state = currentSnapshot.deepBreathEnabled ? .on : .off
+        updateDaemonStatus()
         updateDomainList()
     }
 
@@ -153,6 +168,21 @@ final class PreferencesWindowController: NSWindowController {
         currentSnapshot.deepBreathEnabled = sender.state == .on
     }
 
+    @objc private func setupDaemon() {
+        if blocker.isDaemonInstalled {
+            let alert = NSAlert()
+            alert.messageText = "Remove blocking helper?"
+            alert.informativeText = "This will remove the background helper that applies website blocking."
+            alert.addButton(withTitle: "Remove")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            _ = blocker.uninstallDaemon()
+        } else {
+            _ = blocker.installDaemon()
+        }
+        updateDaemonStatus()
+    }
+
     @objc private func addDomain() {
         let domain = domainField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !domain.isEmpty else { return }
@@ -164,6 +194,22 @@ final class PreferencesWindowController: NSWindowController {
     @objc private func clearDomains() {
         blocker.blockedDomains = []
         updateDomainList()
+    }
+
+    private func updateDaemonStatus() {
+        if blocker.isDaemonInstalled {
+            setupButton.title = "Remove Blocking Helper"
+            daemonStatusLabel.stringValue = "Installed - blocking works without password prompts"
+            daemonStatusLabel.textColor = .systemGreen
+            domainField.isEnabled = true
+            addDomainButton.isEnabled = true
+        } else {
+            setupButton.title = "Setup Blocking"
+            daemonStatusLabel.stringValue = "Requires one-time admin password to install helper"
+            daemonStatusLabel.textColor = .secondaryLabelColor
+            domainField.isEnabled = false
+            addDomainButton.isEnabled = false
+        }
     }
 
     private func updateDomainList() {
